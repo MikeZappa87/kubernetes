@@ -94,6 +94,9 @@ github.com/Microsoft/hcsshim/internal/vmcompute
 github.com/Microsoft/hcsshim/internal/wclayer
 github.com/Microsoft/hcsshim/internal/winapi
 github.com/Microsoft/hcsshim/osversion
+# github.com/MikeZappa87/kni-server-client-example v0.0.3
+## explicit; go 1.19
+github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta
 # github.com/NYTimes/gziphandler v1.1.1
 ## explicit; go 1.11
 github.com/NYTimes/gziphandler

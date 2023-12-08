@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package kni;
+option go_package = "pkg/apis/runtime/beta";
+
+service KNI {
+    rpc AttachNetwork(AttachNetworkRequest) returns (AttachNetworkResponse) {} //MVP
+    rpc DetachNetwork(DetachNetworkRequest) returns (DetachNetworkResponse) {} //MVP
+    rpc UpdateNetwork(UpdateNetworkRequest) returns (UpdateNetworkResponse) {}
+    rpc QueryNetworks(QueryNetworksRequest) returns (QueryNetworksResponse) {} 
+    rpc NetworkStatus(NetworkStatusRequest) returns (NetworkStatusResponse) {} 
+    rpc SetupNodeNetwork(SetupNodeNetworkRequest) returns (SetupNodeNetworkResponse) {} 
+    rpc QueryPod(QueryPodRequest) returns (QueryPodResponse) {} 
+}
+
+message UpdateNetworkRequest {
+
+}
+
+message UpdateNetworkResponse {
+
+}
+
+message QueryPodRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+}
+
+message QueryPodResponse {
+
+}
+
+message SetupNodeNetworkRequest {
+
+}
+
+message SetupNodeNetworkResponse {
+
+}
+
+message AttachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> metadata = 7;
+}
+    
+message AttachNetworkResponse {
+    map<string, IPConfig> ipconfigs = 1;
+    map<string,string> metadata = 2;
+}
+    
+message DetachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> metadata = 7;
+}
+    
+message DetachNetworkResponse {
+}
+    
+message NetworkStatusRequest {
+    
+}
+    
+message NetworkStatusResponse {
+    map<string,string> status = 1;
+}
+
+message QueryNetworksRequest {
+    
+}
+
+message QueryNetworksResponse {
+    repeated string names = 1;
+}
+    
+message IPConfig {
+    repeated string ip = 1;
+    string mac = 2;
+}
+    
+message Network {
+    string name = 1;
+}
+    
+message Isolation {
+    string path = 1;
+    string type = 2; //Network Namespace, kernel, …
+    map<string,string> metadata = 3;
+}
+    
