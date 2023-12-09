@@ -55,7 +55,6 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/images"
-	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/remote"
 	runtimeutil "k8s.io/kubernetes/pkg/kubelet/kuberuntime/util"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/logs"
@@ -102,7 +101,7 @@ type kubeGenericRuntimeManager struct {
 	runtimeName string
 	recorder    record.EventRecorder
 	osInterface kubecontainer.OSInterface
-
+	networkRuntime beta.KNIClient
 	// machineInfo contains the machine information.
 	machineInfo *cadvisorapi.MachineInfo
 
@@ -203,6 +202,7 @@ func NewKubeGenericRuntimeManager(
 	cpuCFSQuotaPeriod metav1.Duration,
 	runtimeService internalapi.RuntimeService,
 	imageService internalapi.ImageManagerService,
+	networkRuntime beta.KNIClient,
 	containerManager cm.ContainerManager,
 	logManager logs.ContainerLogManager,
 	runtimeClassManager *runtimeclass.Manager,
@@ -239,6 +239,7 @@ func NewKubeGenericRuntimeManager(
 		memorySwapBehavior:     memorySwapBehavior,
 		getNodeAllocatable:     getNodeAllocatable,
 		memoryThrottlingFactor: memoryThrottlingFactor,
+		networkRuntime: 		networkRuntime,
 	}
 	
 	typedVersion, err := kubeRuntimeManager.getTypedVersion(ctx)
@@ -1201,19 +1202,12 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 
 		netns := resp.Info["netns"]
 
-		netClient, err := networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock")
-
-		if err != nil {
-			result.Fail(err)
-			return
-		}
-
 		iso := &beta.Isolation{
 			Path: netns,
 			Type: "namespace",
 		}
 
-		netres, err := netClient.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+		netres, err := m.networkRuntime.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 			Isolation: iso,
 			Id: podSandboxID,
 			Namespace: resp.Status.Metadata.Namespace,
@@ -1409,13 +1403,6 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	killSandboxResult := kubecontainer.NewSyncResult(kubecontainer.KillPodSandbox, runningPod.ID)
 	result.AddSyncResult(killSandboxResult)
 
-	netclient, err := networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock")
-
-	if err != nil {
-		killSandboxResult.Fail(err, "no runtime")
-		return
-	}
-
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {
@@ -1423,9 +1410,14 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
 		}
 
-		netclient.DetachNetwork(context.TODO(), &beta.DetachNetworkRequest{
+		_, err := m.networkRuntime.DetachNetwork(context.TODO(), &beta.DetachNetworkRequest{
 			Id: podSandbox.ID.ID,
 		})
+
+		if err != nil {
+			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
+			klog.ErrorS(nil, "Failed to detach network", "podSandboxID", podSandbox.ID)
+		}
 	}
 
 	return
