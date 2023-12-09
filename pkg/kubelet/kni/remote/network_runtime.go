@@ -9,9 +9,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type networkRuntimeService struct {
-	runtimeClient beta.KNIClient
-}
 //protocol unix address /tmp/kni.sock
 func NewNetworkRuntimeService(protocol, sockAddr string) (beta.KNIClient, error) {
 
