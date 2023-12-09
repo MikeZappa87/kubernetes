@@ -101,7 +101,7 @@ type kubeGenericRuntimeManager struct {
 	runtimeName string
 	recorder    record.EventRecorder
 	osInterface kubecontainer.OSInterface
-	networkRuntime beta.KNIClient
+	networkService beta.KNIClient
 	// machineInfo contains the machine information.
 	machineInfo *cadvisorapi.MachineInfo
 
@@ -239,7 +239,7 @@ func NewKubeGenericRuntimeManager(
 		memorySwapBehavior:     memorySwapBehavior,
 		getNodeAllocatable:     getNodeAllocatable,
 		memoryThrottlingFactor: memoryThrottlingFactor,
-		networkRuntime: 		networkRuntime,
+		networkService: 		networkRuntime,
 	}
 	
 	typedVersion, err := kubeRuntimeManager.getTypedVersion(ctx)
@@ -1213,7 +1213,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			Type: "namespace",
 		}
 
-		netres, err := m.networkRuntime.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+		netres, err := m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 			Isolation: iso,
 			Id: podSandboxID,
 			Namespace: resp.Status.Metadata.Namespace,
@@ -1416,7 +1416,7 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
 		}
 		//We may need to store the netns to the Sandbox type in K8s. However the network runtime could store it on the server side
-		_, err := m.networkRuntime.DetachNetwork(ctx, &beta.DetachNetworkRequest{
+		_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
 			Id: podSandbox.ID.ID,
 			Name: podSandbox.Name,
 			Annotations: pod.Annotations,
