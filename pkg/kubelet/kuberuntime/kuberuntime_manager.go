@@ -1200,7 +1200,13 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			return
 		}
 
-		netns := resp.Info["netns"]
+		var netns string
+
+		if val, ok := resp.Info["netns"]; ok {
+			netns = val
+		} else {
+			netns = "root"//Probably can come up with something better, however this is a simple POC. 
+		}
 
 		iso := &beta.Isolation{
 			Path: netns,
@@ -1217,7 +1223,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		})
 
 		if err != nil {
-			result.Fail(err)
+			result.Fail(fmt.Errorf("unable to attach network to sandbox: %s: %w",podSandboxID, err))
 			return
 		}
 
@@ -1409,9 +1415,12 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
 		}
-
-		_, err := m.networkRuntime.DetachNetwork(context.TODO(), &beta.DetachNetworkRequest{
+		//We may need to store the netns to the Sandbox type in K8s. However the network runtime could store it on the server side
+		_, err := m.networkRuntime.DetachNetwork(ctx, &beta.DetachNetworkRequest{
 			Id: podSandbox.ID.ID,
+			Name: podSandbox.Name,
+			Annotations: pod.Annotations,
+			Labels: pod.Labels,
 		})
 
 		if err != nil {

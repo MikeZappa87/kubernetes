@@ -110,6 +110,7 @@ func Funcs(codecs runtimeserializer.CodecFactory) []interface{} {
 			obj.AllowedUnsafeSysctls = []string{}
 			obj.VolumePluginDir = kubeletconfigv1beta1.DefaultVolumePluginDir
 			obj.ContainerRuntimeEndpoint = "unix:///run/containerd/containerd.sock"
+			obj.NetworkRuntimeEndpoint = "/tmp/kni.sock"
 
 			if obj.Logging.Format == "" {
 				obj.Logging.Format = "text"

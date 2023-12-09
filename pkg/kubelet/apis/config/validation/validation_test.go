@@ -75,6 +75,7 @@ var (
 			Format: "text",
 		},
 		ContainerRuntimeEndpoint: "unix:///run/containerd/containerd.sock",
+		NetworkRuntimeEndpoint: "/tmp/kni.sock",
 	}
 )
 

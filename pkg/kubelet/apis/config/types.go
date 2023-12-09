@@ -480,6 +480,9 @@ type KubeletConfiguration struct {
 	// Examples:'unix:///path/to/runtime.sock', 'npipe:////./pipe/runtime'
 	ContainerRuntimeEndpoint string
 
+	// /tmp/kni.sock
+	NetworkRuntimeEndpoint string
+
 	// ImageServiceEndpoint is the endpoint of container image service.
 	// If not specified the default value is ContainerRuntimeEndpoint
 	// +optional

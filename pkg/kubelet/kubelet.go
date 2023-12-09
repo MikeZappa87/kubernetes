@@ -332,7 +332,7 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration, 
 		return err
 	}
 
-	if kubeDeps.NetworkService, err = networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock"); err != nil {
+	if kubeDeps.NetworkService, err = networkremote.NewNetworkRuntimeService("unix", kubeCfg.NetworkRuntimeEndpoint); err != nil {
 		return err
 	}
 
