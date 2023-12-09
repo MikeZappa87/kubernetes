@@ -1116,10 +1116,12 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	//
 	// We default to the IPs in the passed-in pod status, and overwrite them if the
 	// sandbox needs to be (re)started.
+	
 	var podIPs []string
-	if podStatus != nil {
+	
+	/*if podStatus != nil {
 		podIPs = podStatus.IPs
-	}
+	}*/
 
 	// Step 4: Create a sandbox for the pod if necessary.
 	podSandboxID := podContainerChanges.SandboxID
@@ -1202,6 +1204,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		netClient, err := networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock")
 
 		if err != nil {
+			result.Fail(err)
 			return
 		}
 
@@ -1210,7 +1213,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			Type: "namespace",
 		}
 
-		_, err = netClient.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+		netres, err := netClient.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 			Isolation: iso,
 			Id: podSandboxID,
 			Namespace: resp.Status.Metadata.Namespace,
@@ -1218,6 +1221,13 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			Annotations: resp.Status.Annotations,
 			Labels: resp.Status.Labels,
 		})
+
+		if err != nil {
+			result.Fail(err)
+			return
+		}
+
+		podIPs = netres.Ipconfigs["eth0"].Ip
 
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
@@ -1398,12 +1408,24 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	// stop sandbox, the sandbox will be removed in GarbageCollect
 	killSandboxResult := kubecontainer.NewSyncResult(kubecontainer.KillPodSandbox, runningPod.ID)
 	result.AddSyncResult(killSandboxResult)
+
+	netclient, err := networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock")
+
+	if err != nil {
+		killSandboxResult.Fail(err, "no runtime")
+		return
+	}
+
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
 		}
+
+		netclient.DetachNetwork(context.TODO(), &beta.DetachNetworkRequest{
+			Id: podSandbox.ID.ID,
+		})
 	}
 
 	return

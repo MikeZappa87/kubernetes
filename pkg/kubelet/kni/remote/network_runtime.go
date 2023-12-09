@@ -36,11 +36,3 @@ func NewNetworkRuntimeService(protocol, sockAddr string) (beta.KNIClient, error)
 
 	return beta.NewKNIClient(conn), nil
 }
-
-func (r *networkRuntimeService) AttachNetwork(req *beta.AttachNetworkRequest) (beta.AttachNetworkResponse, error) {
-	return beta.AttachNetworkResponse{}, nil
-}
-
-func (r *networkRuntimeService) DetachNetwork(req *beta.DetachNetworkRequest) (beta.DetachNetworkResponse, error) {
-	return beta.DetachNetworkResponse{}, nil
-}
