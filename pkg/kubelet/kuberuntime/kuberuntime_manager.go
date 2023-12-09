@@ -25,6 +25,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/google/go-cmp/cmp"
 	"go.opentelemetry.io/otel/trace"
@@ -54,6 +55,7 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/remote"
 	runtimeutil "k8s.io/kubernetes/pkg/kubelet/kuberuntime/util"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/logs"
@@ -238,7 +240,7 @@ func NewKubeGenericRuntimeManager(
 		getNodeAllocatable:     getNodeAllocatable,
 		memoryThrottlingFactor: memoryThrottlingFactor,
 	}
-
+	
 	typedVersion, err := kubeRuntimeManager.getTypedVersion(ctx)
 	if err != nil {
 		klog.ErrorS(err, "Get runtime version failed")
@@ -1194,6 +1196,28 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			result.Fail(errors.New("pod sandbox status is nil"))
 			return
 		}
+
+		netns := resp.Info["netns"]
+
+		netClient, err := networkremote.NewNetworkRuntimeService("unix", "/tmp/kni.sock")
+
+		if err != nil {
+			return
+		}
+
+		iso := &beta.Isolation{
+			Path: netns,
+			Type: "namespace",
+		}
+
+		_, err = netClient.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+			Isolation: iso,
+			Id: podSandboxID,
+			Namespace: resp.Status.Metadata.Namespace,
+			Name: resp.Status.Metadata.Name,
+			Annotations: resp.Status.Annotations,
+			Labels: resp.Status.Labels,
+		})
 
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
