@@ -27,7 +27,7 @@ func NewNetworkRuntimeService(protocol, sockAddr string) (beta.KNIClient, error)
 
 	conn, err := grpc.Dial(sockAddr, options...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer conn.Close()
 
