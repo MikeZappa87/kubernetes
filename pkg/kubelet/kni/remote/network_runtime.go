@@ -10,7 +10,9 @@ import (
 )
 
 //protocol unix address /tmp/kni.sock
-func NewNetworkRuntimeService(protocol, sockAddr string) (beta.KNIClient, error) {
+func NewNetworkRuntimeService(sockAddr string) (beta.KNIClient, error) {
+
+	protocol := "unix"
 
 	var (
 		credentials = insecure.NewCredentials()
