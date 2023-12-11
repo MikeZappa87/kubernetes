@@ -519,6 +519,7 @@ func autoConvert_v1beta1_KubeletConfiguration_To_config_KubeletConfiguration(in 
 	}
 	out.ContainerRuntimeEndpoint = in.ContainerRuntimeEndpoint
 	out.ImageServiceEndpoint = in.ImageServiceEndpoint
+	out.NetworkRuntimeEndpoint = in.NetworkRuntimeEndpoint
 	return nil
 }
 

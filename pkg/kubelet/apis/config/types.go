@@ -481,6 +481,7 @@ type KubeletConfiguration struct {
 	ContainerRuntimeEndpoint string
 
 	// /tmp/kni.sock
+	// +optional
 	NetworkRuntimeEndpoint string
 
 	// ImageServiceEndpoint is the endpoint of container image service.

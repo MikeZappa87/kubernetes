@@ -271,10 +271,6 @@ func ValidateKubeletConfiguration(kc *kubeletconfig.KubeletConfiguration, featur
 		allErrors = append(allErrors, fmt.Errorf("invalid configuration: the containerRuntimeEndpoint was not specified or empty"))
 	}
 
-	if kc.NetworkRuntimeEndpoint == "" {
-		allErrors = append(allErrors, fmt.Errorf("invalid configuration: the networkRuntimeEndpoint was not specified or empty"))
-	}
-
 	if kc.EnableSystemLogQuery && !localFeatureGate.Enabled(features.NodeLogQuery) {
 		allErrors = append(allErrors, fmt.Errorf("invalid configuration: NodeLogQuery feature gate is required for enableSystemLogHandler"))
 	}

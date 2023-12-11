@@ -830,6 +830,8 @@ type KubeletConfiguration struct {
 	// If not specified, the value in containerRuntimeEndpoint is used.
 	// +optional
 	ImageServiceEndpoint string `json:"imageServiceEndpoint,omitempty"`
+
+	NetworkRuntimeEndpoint string `json:"NetworkRuntimeEndpoint,omitempty"`
 }
 
 type KubeletAuthorizationMode string

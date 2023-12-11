@@ -1184,7 +1184,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		}
 		klog.V(4).InfoS("Created PodSandbox for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
 
-		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
+		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, true)
 		if err != nil {
 			ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
 			if referr != nil {
@@ -1208,10 +1208,14 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			netns = "root"//Probably can come up with something better, however this is a simple POC. 
 		}
 
+		klog.V(4).InfoS("retrieved network name", "podSandboxID", podSandboxID,"netns-path", netns, "pod", klog.KObj(pod))
+
 		iso := &beta.Isolation{
 			Path: netns,
 			Type: "namespace",
 		}
+
+		klog.V(4).InfoS("attaching network", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
 
 		netres, err := m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 			Isolation: iso,
