@@ -1120,9 +1120,9 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	
 	var podIPs []string
 	
-	/*if podStatus != nil {
+	if podStatus != nil {
 		podIPs = podStatus.IPs
-	}*/
+	}
 
 	// Step 4: Create a sandbox for the pod if necessary.
 	podSandboxID := podContainerChanges.SandboxID
@@ -1184,7 +1184,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		}
 		klog.V(4).InfoS("Created PodSandbox for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
 
-		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, true)
+		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
 		if err != nil {
 			ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
 			if referr != nil {
@@ -1199,43 +1199,43 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			result.Fail(errors.New("pod sandbox status is nil"))
 			return
 		}
-
-		var netns string
-
-		if val, ok := resp.Info["netns"]; ok {
-			netns = val
-		} else {
-			netns = "root"//Probably can come up with something better, however this is a simple POC. 
-		}
-
-		klog.V(4).InfoS("retrieved network name", "podSandboxID", podSandboxID,"netns-path", netns, "pod", klog.KObj(pod))
-
-		iso := &beta.Isolation{
-			Path: netns,
-			Type: "namespace",
-		}
-
-		klog.V(4).InfoS("attaching network", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
-
-		netres, err := m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
-			Isolation: iso,
-			Id: podSandboxID,
-			Namespace: resp.Status.Metadata.Namespace,
-			Name: resp.Status.Metadata.Name,
-			Annotations: resp.Status.Annotations,
-			Labels: resp.Status.Labels,
-		})
-
-		if err != nil {
-			result.Fail(fmt.Errorf("unable to attach network to sandbox: %s: %w",podSandboxID, err))
-			return
-		}
-
-		podIPs = netres.Ipconfigs["eth0"].Ip
-
+		
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
 		if !kubecontainer.IsHostNetworkPod(pod) {
+			var netns string
+
+			if val, ok := resp.Status.Annotations["netns"]; ok {
+				netns = val
+
+				pod.Annotations["netns"] = val
+			} else {
+				netns = "root"//Probably can come up with something better, however this is a simple POC. 
+			}
+	
+			klog.V(4).InfoS("retrieved network name", "podSandboxID", podSandboxID,"netns-path", netns, "pod", klog.KObj(pod))
+	
+			iso := &beta.Isolation{
+				Path: netns,
+				Type: "namespace",
+			}
+	
+			klog.V(4).InfoS("attaching network", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
+	
+			_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+				Isolation: iso,
+				Id: podSandboxID,
+				Namespace: resp.Status.Metadata.Namespace,
+				Name: resp.Status.Metadata.Name,
+				Annotations: resp.Status.Annotations,
+				Labels: resp.Status.Labels,
+			})
+	
+			if err != nil {
+				result.Fail(fmt.Errorf("unable to attach network to sandbox: %s: %w",podSandboxID, err))
+				return
+			}
+
 			// Overwrite the podIPs passed in the pod status, since we just started the pod sandbox.
 			podIPs = m.determinePodSandboxIPs(pod.Namespace, pod.Name, resp.GetStatus())
 			klog.V(4).InfoS("Determined the ip for pod after sandbox changed", "IPs", podIPs, "pod", klog.KObj(pod))
@@ -1415,21 +1415,29 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
+		
+		if !kubecontainer.IsHostNetworkPod(pod) {
+			//We may need to store the netns to the Sandbox type in K8s. However the network runtime could store it on the server side
+			_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
+				Id: podSandbox.ID.ID,
+				Name: podSandbox.Name,
+				Annotations: pod.Annotations,
+				Labels: pod.Labels,
+				Isolation: &beta.Isolation{
+					Path: pod.Annotations["netns"],
+					Type: "namespace",
+				},
+			})
+
+			if err != nil {
+				killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
+				klog.ErrorS(nil, "Failed to detach network", "podSandboxID", podSandbox.ID)
+			}
+		}
+
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
-		}
-		//We may need to store the netns to the Sandbox type in K8s. However the network runtime could store it on the server side
-		_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
-			Id: podSandbox.ID.ID,
-			Name: podSandbox.Name,
-			Annotations: pod.Annotations,
-			Labels: pod.Labels,
-		})
-
-		if err != nil {
-			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
-			klog.ErrorS(nil, "Failed to detach network", "podSandboxID", podSandbox.ID)
 		}
 	}
 

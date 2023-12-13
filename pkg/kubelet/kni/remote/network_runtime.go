@@ -2,36 +2,58 @@ package networkremote
 
 import (
 	"context"
-	"net"
+	"time"
 
 	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials/insecure"
+	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/kubelet/util"
 )
 
-//protocol unix address /tmp/kni.sock
-func NewNetworkRuntimeService(sockAddr string) (beta.KNIClient, error) {
+const (
+	// How frequently to report identical errors
+	identicalErrorDelay = 1 * time.Minute
 
-	protocol := "unix"
+	// connection parameters
+	maxBackoffDelay      = 3 * time.Second
+	baseBackoffDelay     = 100 * time.Millisecond
+	minConnectionTimeout = 5 * time.Second
+	maxMsgSize = 1024 * 1024 * 16
+)
 
-	var (
-		credentials = insecure.NewCredentials()
-		dialer      = func(ctx context.Context, addr string) (net.Conn, error) {
-			var d net.Dialer
-			return d.DialContext(ctx, protocol, addr)
-		}
-		options = []grpc.DialOption{
-			grpc.WithTransportCredentials(credentials),
-			grpc.WithBlock(),
-			grpc.WithContextDialer(dialer),
-		}
-	)
-
-	conn, err := grpc.Dial(sockAddr, options...)
+// NewRemoteRuntimeService creates a new internalapi.RuntimeService.
+func NewNetworkRuntimeService(endpoint string, connectionTimeout time.Duration) (beta.KNIClient, error) {
+	klog.V(3).InfoS("Connecting to runtime service", "endpoint", endpoint)
+	addr, dialer, err := util.GetAddressAndDialer(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
+	defer cancel()
+
+	var dialOpts []grpc.DialOption
+	dialOpts = append(dialOpts,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(dialer),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
+
+	connParams := grpc.ConnectParams{
+		Backoff: backoff.DefaultConfig,
+	}
+	connParams.MinConnectTimeout = minConnectionTimeout
+	connParams.Backoff.BaseDelay = baseBackoffDelay
+	connParams.Backoff.MaxDelay = maxBackoffDelay
+	dialOpts = append(dialOpts,
+		grpc.WithConnectParams(connParams),
+	)
+
+	conn, err := grpc.DialContext(ctx, addr, dialOpts...)
+	if err != nil {
+		klog.ErrorS(err, "Connect remote runtime failed", "address", addr)
+		return nil, err
+	}
 
 	return beta.NewKNIClient(conn), nil
 }
