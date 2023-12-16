@@ -1119,6 +1119,9 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	// sandbox needs to be (re)started.
 	
 	var podIPs []string
+	if podStatus != nil {
+		podIPs = podStatus.IPs
+	}
 	
 	// Step 4: Create a sandbox for the pod if necessary.
 	podSandboxID := podContainerChanges.SandboxID
