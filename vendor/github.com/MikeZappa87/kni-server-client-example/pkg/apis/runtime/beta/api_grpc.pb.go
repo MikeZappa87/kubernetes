@@ -19,12 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	KNI_AttachNetwork_FullMethodName    = "/kni.KNI/AttachNetwork"
-	KNI_DetachNetwork_FullMethodName    = "/kni.KNI/DetachNetwork"
-	KNI_QueryNetworks_FullMethodName    = "/kni.KNI/QueryNetworks"
-	KNI_NetworkStatus_FullMethodName    = "/kni.KNI/NetworkStatus"
-	KNI_SetupNodeNetwork_FullMethodName = "/kni.KNI/SetupNodeNetwork"
-	KNI_QueryPod_FullMethodName         = "/kni.KNI/QueryPod"
+	KNI_AttachNetwork_FullMethodName     = "/kni.KNI/AttachNetwork"
+	KNI_DetachNetwork_FullMethodName     = "/kni.KNI/DetachNetwork"
+	KNI_QueryPodNetwork_FullMethodName   = "/kni.KNI/QueryPodNetwork"
+	KNI_SetupNodeNetwork_FullMethodName  = "/kni.KNI/SetupNodeNetwork"
+	KNI_QueryNodeNetworks_FullMethodName = "/kni.KNI/QueryNodeNetworks"
 )
 
 // KNIClient is the client API for KNI service.
@@ -33,10 +32,9 @@ const (
 type KNIClient interface {
 	AttachNetwork(ctx context.Context, in *AttachNetworkRequest, opts ...grpc.CallOption) (*AttachNetworkResponse, error)
 	DetachNetwork(ctx context.Context, in *DetachNetworkRequest, opts ...grpc.CallOption) (*DetachNetworkResponse, error)
-	QueryNetworks(ctx context.Context, in *QueryNetworksRequest, opts ...grpc.CallOption) (*QueryNetworksResponse, error)
-	NetworkStatus(ctx context.Context, in *NetworkStatusRequest, opts ...grpc.CallOption) (*NetworkStatusResponse, error)
+	QueryPodNetwork(ctx context.Context, in *QueryPodNetworkRequest, opts ...grpc.CallOption) (*QueryPodNetworkResponse, error)
 	SetupNodeNetwork(ctx context.Context, in *SetupNodeNetworkRequest, opts ...grpc.CallOption) (*SetupNodeNetworkResponse, error)
-	QueryPod(ctx context.Context, in *QueryPodRequest, opts ...grpc.CallOption) (*QueryPodResponse, error)
+	QueryNodeNetworks(ctx context.Context, in *QueryNodeNetworksRequest, opts ...grpc.CallOption) (*QueryNodeNetworksResponse, error)
 }
 
 type kNIClient struct {
@@ -65,18 +63,9 @@ func (c *kNIClient) DetachNetwork(ctx context.Context, in *DetachNetworkRequest,
 	return out, nil
 }
 
-func (c *kNIClient) QueryNetworks(ctx context.Context, in *QueryNetworksRequest, opts ...grpc.CallOption) (*QueryNetworksResponse, error) {
-	out := new(QueryNetworksResponse)
-	err := c.cc.Invoke(ctx, KNI_QueryNetworks_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *kNIClient) NetworkStatus(ctx context.Context, in *NetworkStatusRequest, opts ...grpc.CallOption) (*NetworkStatusResponse, error) {
-	out := new(NetworkStatusResponse)
-	err := c.cc.Invoke(ctx, KNI_NetworkStatus_FullMethodName, in, out, opts...)
+func (c *kNIClient) QueryPodNetwork(ctx context.Context, in *QueryPodNetworkRequest, opts ...grpc.CallOption) (*QueryPodNetworkResponse, error) {
+	out := new(QueryPodNetworkResponse)
+	err := c.cc.Invoke(ctx, KNI_QueryPodNetwork_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +81,9 @@ func (c *kNIClient) SetupNodeNetwork(ctx context.Context, in *SetupNodeNetworkRe
 	return out, nil
 }
 
-func (c *kNIClient) QueryPod(ctx context.Context, in *QueryPodRequest, opts ...grpc.CallOption) (*QueryPodResponse, error) {
-	out := new(QueryPodResponse)
-	err := c.cc.Invoke(ctx, KNI_QueryPod_FullMethodName, in, out, opts...)
+func (c *kNIClient) QueryNodeNetworks(ctx context.Context, in *QueryNodeNetworksRequest, opts ...grpc.CallOption) (*QueryNodeNetworksResponse, error) {
+	out := new(QueryNodeNetworksResponse)
+	err := c.cc.Invoke(ctx, KNI_QueryNodeNetworks_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +96,9 @@ func (c *kNIClient) QueryPod(ctx context.Context, in *QueryPodRequest, opts ...g
 type KNIServer interface {
 	AttachNetwork(context.Context, *AttachNetworkRequest) (*AttachNetworkResponse, error)
 	DetachNetwork(context.Context, *DetachNetworkRequest) (*DetachNetworkResponse, error)
-	QueryNetworks(context.Context, *QueryNetworksRequest) (*QueryNetworksResponse, error)
-	NetworkStatus(context.Context, *NetworkStatusRequest) (*NetworkStatusResponse, error)
+	QueryPodNetwork(context.Context, *QueryPodNetworkRequest) (*QueryPodNetworkResponse, error)
 	SetupNodeNetwork(context.Context, *SetupNodeNetworkRequest) (*SetupNodeNetworkResponse, error)
-	QueryPod(context.Context, *QueryPodRequest) (*QueryPodResponse, error)
+	QueryNodeNetworks(context.Context, *QueryNodeNetworksRequest) (*QueryNodeNetworksResponse, error)
 }
 
 // UnimplementedKNIServer should be embedded to have forward compatible implementations.
@@ -123,17 +111,14 @@ func (UnimplementedKNIServer) AttachNetwork(context.Context, *AttachNetworkReque
 func (UnimplementedKNIServer) DetachNetwork(context.Context, *DetachNetworkRequest) (*DetachNetworkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DetachNetwork not implemented")
 }
-func (UnimplementedKNIServer) QueryNetworks(context.Context, *QueryNetworksRequest) (*QueryNetworksResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryNetworks not implemented")
-}
-func (UnimplementedKNIServer) NetworkStatus(context.Context, *NetworkStatusRequest) (*NetworkStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NetworkStatus not implemented")
+func (UnimplementedKNIServer) QueryPodNetwork(context.Context, *QueryPodNetworkRequest) (*QueryPodNetworkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryPodNetwork not implemented")
 }
 func (UnimplementedKNIServer) SetupNodeNetwork(context.Context, *SetupNodeNetworkRequest) (*SetupNodeNetworkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetupNodeNetwork not implemented")
 }
-func (UnimplementedKNIServer) QueryPod(context.Context, *QueryPodRequest) (*QueryPodResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryPod not implemented")
+func (UnimplementedKNIServer) QueryNodeNetworks(context.Context, *QueryNodeNetworksRequest) (*QueryNodeNetworksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryNodeNetworks not implemented")
 }
 
 // UnsafeKNIServer may be embedded to opt out of forward compatibility for this service.
@@ -183,38 +168,20 @@ func _KNI_DetachNetwork_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KNI_QueryNetworks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryNetworksRequest)
+func _KNI_QueryPodNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryPodNetworkRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KNIServer).QueryNetworks(ctx, in)
+		return srv.(KNIServer).QueryPodNetwork(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KNI_QueryNetworks_FullMethodName,
+		FullMethod: KNI_QueryPodNetwork_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KNIServer).QueryNetworks(ctx, req.(*QueryNetworksRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KNI_NetworkStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NetworkStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KNIServer).NetworkStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: KNI_NetworkStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KNIServer).NetworkStatus(ctx, req.(*NetworkStatusRequest))
+		return srv.(KNIServer).QueryPodNetwork(ctx, req.(*QueryPodNetworkRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -237,20 +204,20 @@ func _KNI_SetupNodeNetwork_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KNI_QueryPod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryPodRequest)
+func _KNI_QueryNodeNetworks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryNodeNetworksRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KNIServer).QueryPod(ctx, in)
+		return srv.(KNIServer).QueryNodeNetworks(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KNI_QueryPod_FullMethodName,
+		FullMethod: KNI_QueryNodeNetworks_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KNIServer).QueryPod(ctx, req.(*QueryPodRequest))
+		return srv.(KNIServer).QueryNodeNetworks(ctx, req.(*QueryNodeNetworksRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -271,20 +238,16 @@ var KNI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _KNI_DetachNetwork_Handler,
 		},
 		{
-			MethodName: "QueryNetworks",
-			Handler:    _KNI_QueryNetworks_Handler,
-		},
-		{
-			MethodName: "NetworkStatus",
-			Handler:    _KNI_NetworkStatus_Handler,
+			MethodName: "QueryPodNetwork",
+			Handler:    _KNI_QueryPodNetwork_Handler,
 		},
 		{
 			MethodName: "SetupNodeNetwork",
 			Handler:    _KNI_SetupNodeNetwork_Handler,
 		},
 		{
-			MethodName: "QueryPod",
-			Handler:    _KNI_QueryPod_Handler,
+			MethodName: "QueryNodeNetworks",
+			Handler:    _KNI_QueryNodeNetworks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

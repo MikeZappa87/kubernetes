@@ -1120,10 +1120,6 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	
 	var podIPs []string
 	
-	if podStatus != nil {
-		podIPs = podStatus.IPs
-	}
-
 	// Step 4: Create a sandbox for the pod if necessary.
 	podSandboxID := podContainerChanges.SandboxID
 	if podContainerChanges.CreateSandbox {
@@ -1214,14 +1210,14 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 			}
 	
 			klog.V(4).InfoS("retrieved network name", "podSandboxID", podSandboxID,"netns-path", netns, "pod", klog.KObj(pod))
-	
+			
 			iso := &beta.Isolation{
 				Path: netns,
 				Type: "namespace",
 			}
 	
 			klog.V(4).InfoS("attaching network", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
-	
+			
 			_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 				Isolation: iso,
 				Id: podSandboxID,
@@ -1236,8 +1232,21 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 				return
 			}
 
+			netpod, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
+				Id: podSandboxID,
+			})
+	
+			if err != nil {
+				return
+			}
+
+			if netpod.GetIpconfigs() == nil {
+				result.Fail(errors.New("pod network status is nil"))
+				return
+			}
+			
 			// Overwrite the podIPs passed in the pod status, since we just started the pod sandbox.
-			podIPs = m.determinePodSandboxIPs(pod.Namespace, pod.Name, resp.GetStatus())
+			podIPs = m.determinePodSandboxIPs(pod.Namespace, pod.Name, netpod)
 			klog.V(4).InfoS("Determined the ip for pod after sandbox changed", "IPs", podIPs, "pod", klog.KObj(pod))
 		}
 	}
@@ -1245,10 +1254,13 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	// the start containers routines depend on pod ip(as in primary pod ip)
 	// instead of trying to figure out if we have 0 < len(podIPs)
 	// everytime, we short circuit it here
+	
+	
 	podIP := ""
 	if len(podIPs) != 0 {
 		podIP = podIPs[0]
 	}
+	
 
 	// Get podSandboxConfig for containers to start.
 	configPodSandboxResult := kubecontainer.NewSyncResult(kubecontainer.ConfigPodSandbox, podSandboxID)
@@ -1281,6 +1293,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		if sc.HasWindowsHostProcessRequest(pod, spec.container) {
 			metrics.StartedHostProcessContainersTotal.WithLabelValues(metricLabel).Inc()
 		}
+
 		klog.V(4).InfoS("Creating container in pod", "containerType", typeName, "container", spec.container, "pod", klog.KObj(pod))
 		// NOTE (aramase) podIPs are populated for single stack and dual stack clusters. Send only podIPs.
 		if msg, err := m.startContainer(ctx, podSandboxID, podSandboxConfig, spec, pod, podStatus, pullSecrets, podIP, podIPs); err != nil {
@@ -1445,7 +1458,7 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 }
 
 func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {
-	podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
+	//podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
 
 	kubeContainerStatuses := []*kubecontainer.Status{}
 	for _, status := range event.ContainersStatuses {
@@ -1458,7 +1471,7 @@ func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.Containe
 		ID:                kubetypes.UID(event.PodSandboxStatus.Metadata.Uid),
 		Name:              event.PodSandboxStatus.Metadata.Name,
 		Namespace:         event.PodSandboxStatus.Metadata.Namespace,
-		IPs:               podIPs,
+		//IPs:               podIPs,
 		SandboxStatuses:   []*runtimeapi.PodSandboxStatus{event.PodSandboxStatus},
 		ContainerStatuses: kubeContainerStatuses,
 	}, nil
@@ -1519,10 +1532,20 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 			return nil, errors.New("pod sandbox status is nil")
 
 		}
+
+		netpodstatus, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
+			Id: podSandboxID,
+		})
+
+		if err != nil {
+			klog.ErrorS(err, "Pod network status of sandbox for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
+			return nil, err
+		}
+
 		sandboxStatuses = append(sandboxStatuses, resp.Status)
 		// Only get pod IP from latest sandbox
 		if idx == 0 && resp.Status.State == runtimeapi.PodSandboxState_SANDBOX_READY {
-			podIPs = m.determinePodSandboxIPs(namespace, name, resp.Status)
+			podIPs = m.determinePodSandboxIPs(namespace, name, netpodstatus)
 		}
 
 		if idx == 0 && utilfeature.DefaultFeatureGate.Enabled(features.EventedPLEG) {

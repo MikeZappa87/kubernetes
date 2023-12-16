@@ -6,30 +6,18 @@ option go_package = "pkg/apis/runtime/beta";
 service KNI {
     rpc AttachNetwork(AttachNetworkRequest) returns (AttachNetworkResponse) {} //MVP
     rpc DetachNetwork(DetachNetworkRequest) returns (DetachNetworkResponse) {} //MVP
-    rpc UpdateNetwork(UpdateNetworkRequest) returns (UpdateNetworkResponse) {}
-    rpc QueryNetworks(QueryNetworksRequest) returns (QueryNetworksResponse) {} 
-    rpc NetworkStatus(NetworkStatusRequest) returns (NetworkStatusResponse) {} 
-    rpc SetupNodeNetwork(SetupNodeNetworkRequest) returns (SetupNodeNetworkResponse) {} 
-    rpc QueryPod(QueryPodRequest) returns (QueryPodResponse) {} 
+    rpc QueryPodNetwork(QueryPodNetworkRequest) returns (QueryPodNetworkResponse) {} //MVP
+    rpc SetupNodeNetwork(SetupNodeNetworkRequest) returns (SetupNodeNetworkResponse) {}
+    rpc QueryNodeNetworks(QueryNodeNetworksRequest) returns (QueryNodeNetworksResponse) {}
 }
 
-message UpdateNetworkRequest {
-
-}
-
-message UpdateNetworkResponse {
+message QueryNodeNetworksRequest {
 
 }
 
-message QueryPodRequest {
-    string name = 1;
-    string id = 2;
-    string namespace = 3;
-    Isolation isolation = 4;
-}
-
-message QueryPodResponse {
-
+message QueryNodeNetworksResponse {
+    repeated Network networks = 1;
+    map<string,string> metadata = 2;
 }
 
 message SetupNodeNetworkRequest {
@@ -38,6 +26,18 @@ message SetupNodeNetworkRequest {
 
 message SetupNodeNetworkResponse {
 
+}
+
+message QueryPodNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+}
+
+message QueryPodNetworkResponse {
+    map<string, IPConfig> ipconfigs = 1;
+    map<string,string> metadata = 2;
 }
 
 message AttachNetworkRequest {
@@ -66,22 +66,6 @@ message DetachNetworkRequest {
 }
     
 message DetachNetworkResponse {
-}
-    
-message NetworkStatusRequest {
-    
-}
-    
-message NetworkStatusResponse {
-    map<string,string> status = 1;
-}
-
-message QueryNetworksRequest {
-    
-}
-
-message QueryNetworksResponse {
-    repeated string names = 1;
 }
     
 message IPConfig {

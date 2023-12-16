@@ -245,7 +245,7 @@ func (e *EventedPLEG) processCRIEvents(containerEventsResponseCh chan *runtimeap
 			// When a pod is torn down, kubelet may race with PLEG and retrieve
 			// a pod status after network teardown, but the kubernetes API expects
 			// the completed pod's IP to be available after the pod is dead.
-			status.IPs = e.getPodIPs(podID, status)
+			//status.IPs = e.getPodIPs(podID, status)
 		}
 
 		e.updateRunningPodMetric(status)

@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"sort"
 
+	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
 	v1 "k8s.io/api/core/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -302,9 +303,9 @@ func (m *kubeGenericRuntimeManager) getKubeletSandboxes(ctx context.Context, all
 }
 
 // determinePodSandboxIP determines the IP addresses of the given pod sandbox.
-func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(podNamespace, podName string, podSandbox *runtimeapi.PodSandboxStatus) []string {
+func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(podNamespace, podName string, podSandbox *beta.QueryPodNetworkResponse) []string {
 	podIPs := make([]string, 0)
-	if podSandbox.Network == nil {
+	if podSandbox.Ipconfigs == nil {
 		klog.InfoS("Pod Sandbox status doesn't have network information, cannot report IPs", "pod", klog.KRef(podNamespace, podName))
 		return podIPs
 	}
@@ -313,21 +314,21 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIPs(podNamespace, podName
 	// IP (e.g., host networking).
 
 	// pick primary IP
-	if len(podSandbox.Network.Ip) != 0 {
-		if netutils.ParseIPSloppy(podSandbox.Network.Ip) == nil {
-			klog.InfoS("Pod Sandbox reported an unparseable primary IP", "pod", klog.KRef(podNamespace, podName), "IP", podSandbox.Network.Ip)
+	if len(podSandbox.Ipconfigs["kni0"].Ip) != 0 {
+		if netutils.ParseIPSloppy(podSandbox.Ipconfigs["kni0"].Ip[0]) == nil {
+			klog.InfoS("Pod Sandbox reported an unparseable primary IP", "pod", klog.KRef(podNamespace, podName), "IP", podSandbox.Ipconfigs["kni0"].Ip[0])
 			return nil
 		}
-		podIPs = append(podIPs, podSandbox.Network.Ip)
+		podIPs = append(podIPs, podSandbox.Ipconfigs["kni0"].Ip[0])
 	}
 
 	// pick additional ips, if cri reported them
-	for _, podIP := range podSandbox.Network.AdditionalIps {
-		if nil == netutils.ParseIPSloppy(podIP.Ip) {
-			klog.InfoS("Pod Sandbox reported an unparseable additional IP", "pod", klog.KRef(podNamespace, podName), "IP", podIP.Ip)
+	for _, podIP := range podSandbox.Ipconfigs["kni0"].Ip {
+		if nil == netutils.ParseIPSloppy(podIP) {
+			klog.InfoS("Pod Sandbox reported an unparseable additional IP", "pod", klog.KRef(podNamespace, podName), "IP", podIP)
 			return nil
 		}
-		podIPs = append(podIPs, podIP.Ip)
+		podIPs = append(podIPs, podIP)
 	}
 
 	return podIPs
