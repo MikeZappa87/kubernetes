@@ -1258,13 +1258,11 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 	// instead of trying to figure out if we have 0 < len(podIPs)
 	// everytime, we short circuit it here
 	
-	
 	podIP := ""
 	if len(podIPs) != 0 {
 		podIP = podIPs[0]
 	}
 	
-
 	// Get podSandboxConfig for containers to start.
 	configPodSandboxResult := kubecontainer.NewSyncResult(kubecontainer.ConfigPodSandbox, podSandboxID)
 	result.AddSyncResult(configPodSandboxResult)
