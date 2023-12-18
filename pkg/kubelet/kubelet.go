@@ -31,6 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/google/go-cmp/cmp"
 	libcontaineruserns "github.com/opencontainers/runc/libcontainer/userns"
@@ -85,6 +86,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/remote"
 	"k8s.io/kubernetes/pkg/kubelet/kuberuntime"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/logs"
@@ -272,6 +274,7 @@ type Dependencies struct {
 	TLSOptions                *server.TLSOptions
 	RemoteRuntimeService      internalapi.RuntimeService
 	RemoteImageService        internalapi.ImageManagerService
+	networkService			  beta.KNIClient
 	PodStartupLatencyTracker  util.PodStartupLatencyTracker
 	NodeStartupLatencyTracker util.NodeStartupLatencyTracker
 	// remove it after cadvisor.UsingLegacyCadvisorStats dropped.
@@ -326,6 +329,10 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration, 
 		return err
 	}
 	if kubeDeps.RemoteImageService, err = remote.NewRemoteImageService(remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout.Duration, kubeDeps.TracerProvider); err != nil {
+		return err
+	}
+
+	if kubeDeps.networkService, err = networkremote.NewNetworkRuntimeService("/tmp/kni.sock", kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
 		return err
 	}
 
@@ -674,6 +681,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		*kubeCfg.MemoryThrottlingFactor,
 		kubeDeps.PodStartupLatencyTracker,
 		kubeDeps.TracerProvider,
+		kubeDeps.networkService,
 	)
 	if err != nil {
 		return nil, err

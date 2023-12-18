@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package kni;
+option go_package = "pkg/apis/runtime/beta";
+
+service KNI {
+    rpc AttachNetwork(AttachNetworkRequest) returns (AttachNetworkResponse) {} //MVP
+    rpc DetachNetwork(DetachNetworkRequest) returns (DetachNetworkResponse) {} //MVP
+    rpc QueryPodNetwork(QueryPodNetworkRequest) returns (QueryPodNetworkResponse) {} //MVP
+    rpc SetupNodeNetwork(SetupNodeNetworkRequest) returns (SetupNodeNetworkResponse) {}
+    rpc QueryNodeNetworks(QueryNodeNetworksRequest) returns (QueryNodeNetworksResponse) {}
+}
+
+message QueryNodeNetworksRequest {
+
+}
+
+message QueryNodeNetworksResponse {
+    repeated Network networks = 1;
+    map<string,string> metadata = 2;
+}
+
+message SetupNodeNetworkRequest {
+
+}
+
+message SetupNodeNetworkResponse {
+
+}
+
+message QueryPodNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+}
+
+message QueryPodNetworkResponse {
+    map<string, IPConfig> ipconfigs = 1;
+    map<string,string> metadata = 2;
+}
+
+message AttachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> metadata = 7;
+}
+    
+message AttachNetworkResponse {
+    map<string, IPConfig> ipconfigs = 1;
+    map<string,string> metadata = 2;
+}
+    
+message DetachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> metadata = 7;
+}
+    
+message DetachNetworkResponse {
+}
+    
+message IPConfig {
+    repeated string ip = 1;
+    string mac = 2;
+}
+    
+message Network {
+    string name = 1;
+}
+    
+message Isolation {
+    string path = 1;
+    string type = 2; //Network Namespace, kernel, …
+    map<string,string> metadata = 3;
+}
+    

@@ -1121,7 +1121,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 
 	PodReadyToStartContainersCondition: {Default: true, PreRelease: featuregate.Beta},
 
-	PodHostIPs: {Default: true, PreRelease: featuregate.Beta},
+	PodHostIPs: {Default: false, PreRelease: featuregate.Beta},
 
 	PodLifecycleSleepAction: {Default: false, PreRelease: featuregate.Alpha},
 
