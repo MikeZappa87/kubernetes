@@ -1186,74 +1186,14 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
 		if !kubecontainer.IsHostNetworkPod(pod) {
-			resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
-			if err != nil {
-				ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
-				if referr != nil {
-					klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
-				}
-				m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedStatusPodSandBox, "Unable to get pod sandbox status: %v", err)
-				klog.ErrorS(err, "Failed to get pod sandbox status; Skipping pod", "pod", klog.KObj(pod))
-				result.Fail(err)
-				return
-			}
-			if resp.GetStatus() == nil {
-				result.Fail(errors.New("pod sandbox status is nil"))
-				return
-			}
-
-			netns := ""
-
-			if val, ok := resp.Status.Annotations["netns"]; ok {
-				netns = val
-			} else {
-				result.Fail(errors.New("no netns from cri for pod, exiting"))
-				return
-			}
-
-			iso := beta.Isolation{
-				Type: "namespace",
-				Path: netns,
-			}
-
-			_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
-				Isolation: &iso,
-				Id: podSandboxID,
-				Labels: resp.Status.GetLabels(),
-				Annotations: resp.Status.GetAnnotations(),
-			})
+			resp, err := m.AttachNetwork(ctx, &result, pod, podSandboxID)
 
 			if err != nil {
-				ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
-				if referr != nil {
-					klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
-				}
-
-				m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkAttach, "Unable to attach network to pod: %v", err)
-				klog.ErrorS(err, "Failed to attach pod network; Skipping pod", "pod", klog.KObj(pod))
-				result.Fail(err)
+				return
 			}
-			
-			netResp, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
-				Id: podSandboxID,
-			})
-
-			if err != nil {
-				ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
-				if referr != nil {
-					klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
-				}
-
-				m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkPodStatus, "Unable to query pod network status: %v", err)
-				klog.ErrorS(err, "Failed to query pod network status; Skipping pod", "pod", klog.KObj(pod))
-				result.Fail(err)
-			}
-				
-
-			resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netResp, "eth0")
 
 			// Overwrite the podIPs passed in the pod status, since we just started the pod sandbox.
-			podIPs = m.determinePodSandboxIPs(pod.Namespace, pod.Name, resp.GetStatus())
+			podIPs = m.determinePodSandboxIPs(pod.Namespace, pod.Name, resp)
 			klog.V(4).InfoS("Determined the ip for pod after sandbox changed", "IPs", podIPs, "pod", klog.KObj(pod))
 		}
 	}
@@ -1630,8 +1570,78 @@ func (m *kubeGenericRuntimeManager) ListPodSandboxMetrics(ctx context.Context) (
 	return m.runtimeService.ListPodSandboxMetrics(ctx)
 }
 
-func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, netns, podSandboxId string){
+func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *kubecontainer.PodSyncResult,
+	pod *v1.Pod, podSandboxID string) (*runtimeapi.PodSandboxStatus, error){
+		
+	resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
+	if err != nil {
+		ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
+		if referr != nil {
+			klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
+		}
+		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedStatusPodSandBox, "Unable to get pod sandbox status: %v", err)
+		klog.ErrorS(err, "Failed to get pod sandbox status; Skipping pod", "pod", klog.KObj(pod))
+		result.Fail(err)
+		return nil, err
+	}
+	if resp.GetStatus() == nil {
+		result.Fail(errors.New("pod sandbox status is nil"))
+		return nil, err
+	}
+
+	netns := ""
+
+	if val, ok := resp.Status.Annotations["netns"]; ok {
+		netns = val
+	} else {
+		result.Fail(errors.New("no netns from cri for pod, exiting"))
+		return nil, err
+	}
+
+	iso := beta.Isolation{
+		Type: "namespace",
+		Path: netns,
+	}
+
+	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+		Isolation: &iso,
+		Id: podSandboxID,
+		Labels: resp.Status.GetLabels(),
+		Annotations: resp.Status.GetAnnotations(),
+	})
+
+	if err != nil {
+		ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
+		if referr != nil {
+			klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
+		}
+
+		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkAttach, "Unable to attach network to pod: %v", err)
+		klog.ErrorS(err, "Failed to attach pod network; Skipping pod", "pod", klog.KObj(pod))
+		result.Fail(err)
+	}
 	
+	netResp, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
+		Id: podSandboxID,
+	})
+
+	if err != nil {
+		ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
+		if referr != nil {
+			klog.ErrorS(referr, "Couldn't make a ref to pod", "pod", klog.KObj(pod))
+		}
+
+		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkPodStatus, "Unable to query pod network status: %v", err)
+		klog.ErrorS(err, "Failed to query pod network status; Skipping pod", "pod", klog.KObj(pod))
+		result.Fail(err)
+	}
+		
+	resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netResp, "eth0")
+
+	return resp.Status, nil
+}
+
+func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, netns, podSandboxId string){
 	iso := beta.Isolation{
 		Type: "namespace",
 		Path: netns,
