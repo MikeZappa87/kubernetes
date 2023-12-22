@@ -75,6 +75,8 @@ message IPConfig {
     
 message Network {
     string name = 1;
+    bool ready = 2;
+    map<string,string> metadata = 3;
 }
     
 message Isolation {

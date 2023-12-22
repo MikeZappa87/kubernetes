@@ -31,7 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
+	"github.com/MikeZappa87/kni-api/pkg/apis/runtime/beta"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/google/go-cmp/cmp"
 	libcontaineruserns "github.com/opencontainers/runc/libcontainer/userns"

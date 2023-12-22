@@ -636,8 +636,8 @@ func (r *remoteRuntimeService) statusV1(ctx context.Context, verbose bool) (*run
 
 	klog.V(10).InfoS("[RemoteRuntimeService] Status Response", "status", resp.Status)
 
-	if resp.Status == nil || len(resp.Status.Conditions) < 2 {
-		errorMessage := "RuntimeReady or NetworkReady condition are not set"
+	if resp.Status == nil || len(resp.Status.Conditions) < 1 {
+		errorMessage := "RuntimeReady condition are not set"
 		err := errors.New(errorMessage)
 		klog.ErrorS(err, "Status failed")
 		return nil, err

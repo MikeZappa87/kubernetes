@@ -25,7 +25,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/MikeZappa87/kni-server-client-example/pkg/apis/runtime/beta"
+	"github.com/MikeZappa87/kni-api/pkg/apis/runtime/beta"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/google/go-cmp/cmp"
 	"go.opentelemetry.io/otel/trace"
@@ -357,7 +357,18 @@ func (m *kubeGenericRuntimeManager) Status(ctx context.Context) (*kubecontainer.
 	if resp.GetStatus() == nil {
 		return nil, errors.New("runtime status is nil")
 	}
-	return toKubeRuntimeStatus(resp.GetStatus()), nil
+
+	kniresp, err := m.networkService.QueryNodeNetworks(ctx, &beta.QueryNodeNetworksRequest{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if kniresp.GetNetworks() == nil {
+		return nil, errors.New("network runtime response is nil")
+	}
+
+	return toKubeRuntimeStatus(resp.GetStatus(), kniresp.GetNetworks()), nil
 }
 
 // GetPods returns a list of containers grouped by pods. The boolean parameter

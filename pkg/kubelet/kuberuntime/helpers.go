@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/MikeZappa87/kni-api/pkg/apis/runtime/beta"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -200,7 +201,7 @@ func parsePodUIDFromLogsDirectory(name string) types.UID {
 }
 
 // toKubeRuntimeStatus converts the runtimeapi.RuntimeStatus to kubecontainer.RuntimeStatus.
-func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus) *kubecontainer.RuntimeStatus {
+func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus, networks []*beta.Network) *kubecontainer.RuntimeStatus {
 	conditions := []kubecontainer.RuntimeCondition{}
 	for _, c := range status.GetConditions() {
 		conditions = append(conditions, kubecontainer.RuntimeCondition{
@@ -210,6 +211,14 @@ func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus) *kubecontainer.Runtim
 			Message: c.Message,
 		})
 	}
+
+	for _, v := range networks {
+		conditions = append(conditions, kubecontainer.RuntimeCondition{
+			Type:    kubecontainer.RuntimeConditionType(runtimeapi.NetworkReady),
+			Status:  v.Ready,
+		})
+	}
+
 	return &kubecontainer.RuntimeStatus{Conditions: conditions}
 }
 
