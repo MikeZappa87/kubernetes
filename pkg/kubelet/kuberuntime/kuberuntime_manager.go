@@ -1383,7 +1383,12 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	for _, podSandbox := range runningPod.Sandboxes {
 		if !kubecontainer.IsHostNetworkPod(pod) {
 			if netns, ok := pod.Annotations["netns"]; ok {
-				m.DetachNetwork(ctx, netns, podSandbox.ID.ID)
+				if err := m.DetachNetwork(ctx, netns, podSandbox.ID.ID); err != nil {
+					killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
+					klog.ErrorS(nil, "Failed to detach sandbox from network", "podSandboxID", podSandbox.ID)
+
+					continue
+				}
 			}
 		}
 		
@@ -1652,16 +1657,22 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	return resp.Status, nil
 }
 
-func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, netns, podSandboxId string){
+func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, netns, podSandboxId string) error{
 	iso := beta.Isolation{
 		Type: "namespace",
 		Path: netns,
 	}
 	
-	m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
+	_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
 		Id: podSandboxId,
 		Isolation: &iso,
 	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *kubeGenericRuntimeManager) convertKNIStatusToCRINetworkStatus(net *beta.QueryPodNetworkResponse, ifName string) *runtimeapi.PodSandboxNetworkStatus{
