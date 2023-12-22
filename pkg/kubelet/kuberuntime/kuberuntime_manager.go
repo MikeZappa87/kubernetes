@@ -1382,13 +1382,11 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
 		if !kubecontainer.IsHostNetworkPod(pod) {
-			if netns, ok := pod.Annotations["netns"]; ok {
-				if err := m.DetachNetwork(ctx, netns, podSandbox.ID.ID); err != nil {
-					killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
-					klog.ErrorS(nil, "Failed to detach sandbox from network", "podSandboxID", podSandbox.ID)
+			if err := m.DetachNetwork(ctx, podSandbox.ID.ID); err != nil {
+				killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
+				klog.ErrorS(nil, "Failed to detach sandbox from network", "podSandboxID", podSandbox.ID)
 
-					continue
-				}
+				continue
 			}
 		}
 		
@@ -1657,15 +1655,9 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	return resp.Status, nil
 }
 
-func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, netns, podSandboxId string) error{
-	iso := beta.Isolation{
-		Type: "namespace",
-		Path: netns,
-	}
-	
+func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, podSandboxId string) error{
 	_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
 		Id: podSandboxId,
-		Isolation: &iso,
 	})
 
 	if err != nil {
