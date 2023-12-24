@@ -484,6 +484,11 @@ type KubeletConfiguration struct {
 	// If not specified the default value is ContainerRuntimeEndpoint
 	// +optional
 	ImageServiceEndpoint string
+
+	// NetworkRuntimeEndpoint is the endpoint of network runtime service.
+	// Examples:'unix:///path/to/kni.sock'
+	// +optional
+	NetworkRuntimeEndpoint string
 }
 
 // KubeletAuthorizationMode denotes the authorization mode for the kubelet
