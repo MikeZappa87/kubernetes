@@ -55,6 +55,7 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	"k8s.io/kubernetes/pkg/kubelet/kni"
 	runtimeutil "k8s.io/kubernetes/pkg/kubelet/kuberuntime/util"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/logs"
@@ -134,7 +135,7 @@ type kubeGenericRuntimeManager struct {
 	// gRPC service clients
 	runtimeService internalapi.RuntimeService
 	imageService   internalapi.ImageManagerService
-	networkService beta.KNIClient
+	networkService kni.KNIService
 
 	// The version cache of runtime daemon.
 	versionCache *cache.ObjectCache
@@ -212,7 +213,7 @@ func NewKubeGenericRuntimeManager(
 	memoryThrottlingFactor float64,
 	podPullingTimeRecorder images.ImagePodPullingTimeRecorder,
 	tracerProvider trace.TracerProvider,
-	networkSvc beta.KNIClient,
+	networkSvc kni.KNIService,
 ) (KubeGenericRuntime, error) {
 	ctx := context.Background()
 	runtimeService = newInstrumentedRuntimeService(runtimeService)
@@ -358,7 +359,7 @@ func (m *kubeGenericRuntimeManager) Status(ctx context.Context) (*kubecontainer.
 		return nil, errors.New("runtime status is nil")
 	}
 
-	kniresp, err := m.networkService.QueryNodeNetworks(ctx, &beta.QueryNodeNetworksRequest{})
+	kniresp, err := m.networkService.QueryNodeNetworks(ctx)
 
 	if err != nil {
 		return nil, err
@@ -1389,7 +1390,7 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 				continue
 			}
 		}
-		
+
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
 			klog.ErrorS(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)
@@ -1400,15 +1401,13 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 }
 
 func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {
-	
-	netresp, err := m.networkService.QueryPodNetwork(context.TODO(), &beta.QueryPodNetworkRequest{
-		Id: event.GetPodSandboxStatus().Id,
-	})
+
+	netresp, err := m.networkService.QueryPodNetwork(context.TODO(), event.GetPodSandboxStatus().Id)
 
 	if err != nil {
 		return nil, fmt.Errorf("unable to query pod network. %v", err)
 	}
-	
+
 	event.PodSandboxStatus.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
 
 	podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
@@ -1486,9 +1485,7 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 
 		}
 
-		netresp, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
-			Id: podSandboxID,
-		})
+		netresp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
 
 		if err != nil {
 			klog.ErrorS(err, "QueryPodNetwork for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
@@ -1496,7 +1493,7 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 		}
 
 		resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
-		
+
 		sandboxStatuses = append(sandboxStatuses, resp.Status)
 		// Only get pod IP from latest sandbox
 		if idx == 0 && resp.Status.State == runtimeapi.PodSandboxState_SANDBOX_READY {
@@ -1585,8 +1582,8 @@ func (m *kubeGenericRuntimeManager) ListPodSandboxMetrics(ctx context.Context) (
 }
 
 func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *kubecontainer.PodSyncResult,
-	pod *v1.Pod, podSandboxID string) (*runtimeapi.PodSandboxStatus, error){
-		
+	pod *v1.Pod, podSandboxID string) (*runtimeapi.PodSandboxStatus, error) {
+
 	resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
 	if err != nil {
 		ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
@@ -1618,9 +1615,9 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	}
 
 	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
-		Isolation: &iso,
-		Id: podSandboxID,
-		Labels: resp.Status.GetLabels(),
+		Isolation:   &iso,
+		Id:          podSandboxID,
+		Labels:      resp.Status.GetLabels(),
 		Annotations: resp.Status.GetAnnotations(),
 	})
 
@@ -1634,10 +1631,8 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		klog.ErrorS(err, "Failed to attach pod network; Skipping pod", "pod", klog.KObj(pod))
 		result.Fail(err)
 	}
-	
-	netResp, err := m.networkService.QueryPodNetwork(ctx, &beta.QueryPodNetworkRequest{
-		Id: podSandboxID,
-	})
+
+	netResp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
 
 	if err != nil {
 		ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
@@ -1649,16 +1644,14 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		klog.ErrorS(err, "Failed to query pod network status; Skipping pod", "pod", klog.KObj(pod))
 		result.Fail(err)
 	}
-		
+
 	resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netResp, "eth0")
 
 	return resp.Status, nil
 }
 
-func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, podSandboxId string) error{
-	_, err := m.networkService.DetachNetwork(ctx, &beta.DetachNetworkRequest{
-		Id: podSandboxId,
-	})
+func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, podSandboxId string) error {
+	err := m.networkService.DetachNetwork(ctx, podSandboxId)
 
 	if err != nil {
 		return err
@@ -1667,7 +1660,7 @@ func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, podSandbo
 	return nil
 }
 
-func (m *kubeGenericRuntimeManager) convertKNIStatusToCRINetworkStatus(net *beta.QueryPodNetworkResponse, ifName string) *runtimeapi.PodSandboxNetworkStatus{
+func (m *kubeGenericRuntimeManager) convertKNIStatusToCRINetworkStatus(net *beta.QueryPodNetworkResponse, ifName string) *runtimeapi.PodSandboxNetworkStatus {
 	var podIps []*runtimeapi.PodIP
 
 	if net.Ipconfigs == nil {
@@ -1682,14 +1675,20 @@ func (m *kubeGenericRuntimeManager) convertKNIStatusToCRINetworkStatus(net *beta
 				Ip: v,
 			})
 		}
-		
+
+		if len(podIps) == 0 {
+			return &runtimeapi.PodSandboxNetworkStatus{
+				Ip: "",
+			}
+		}
+
 		return &runtimeapi.PodSandboxNetworkStatus{
-			Ip: podIps[0].Ip,
+			Ip:            podIps[0].Ip,
 			AdditionalIps: podIps,
 		}
 	}
 
 	return &runtimeapi.PodSandboxNetworkStatus{
 		Ip: "",
-	} 
+	}
 }

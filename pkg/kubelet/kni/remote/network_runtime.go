@@ -9,22 +9,24 @@ import (
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/kubelet/kni"
 	"k8s.io/kubernetes/pkg/kubelet/util"
 )
 
 const (
-	// How frequently to report identical errors
-	identicalErrorDelay = 1 * time.Minute
-
 	// connection parameters
 	maxBackoffDelay      = 3 * time.Second
 	baseBackoffDelay     = 100 * time.Millisecond
 	minConnectionTimeout = 5 * time.Second
-	maxMsgSize = 1024 * 1024 * 16
+	maxMsgSize           = 1024 * 1024 * 16
 )
 
-// NewRemoteRuntimeService creates a new internalapi.RuntimeService.
-func NewNetworkRuntimeService(endpoint string, connectionTimeout time.Duration) (beta.KNIClient, error) {
+type KNINetworkService struct {
+	beta.KNIClient
+}
+
+// NewRemoteRuntimeService creates a new networkremote.KNIService.
+func NewNetworkRuntimeService(endpoint string, connectionTimeout time.Duration) (kni.KNIService, error) {
 	klog.V(3).InfoS("Connecting to runtime service", "endpoint", endpoint)
 	addr, dialer, err := util.GetAddressAndDialer(endpoint)
 	if err != nil {
@@ -55,5 +57,48 @@ func NewNetworkRuntimeService(endpoint string, connectionTimeout time.Duration) 
 		return nil, err
 	}
 
-	return beta.NewKNIClient(conn), nil
+	kni := KNINetworkService{
+		beta.NewKNIClient(conn),
+	}
+
+	return &kni, nil
+}
+
+func (m *KNINetworkService) AttachNetwork(ctx context.Context, in *beta.AttachNetworkRequest, opts ...grpc.CallOption) (*beta.AttachNetworkResponse, error) {
+	return m.KNIClient.AttachNetwork(ctx, in)
+}
+
+func (m *KNINetworkService) DetachNetwork(ctx context.Context, sandBoxId string) error {
+
+	det := &beta.DetachNetworkRequest{
+		Id: sandBoxId,
+	}
+
+	_, err := m.KNIClient.DetachNetwork(ctx, det)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *KNINetworkService) QueryNodeNetworks(ctx context.Context) (*beta.QueryNodeNetworksResponse, error) {
+
+	query := beta.QueryNodeNetworksRequest{}
+
+	return m.KNIClient.QueryNodeNetworks(ctx, &query)
+}
+
+func (m *KNINetworkService) QueryPodNetwork(ctx context.Context, sandboxId string) (*beta.QueryPodNetworkResponse, error) {
+
+	query := &beta.QueryPodNetworkRequest{
+		Id: sandboxId,
+	}
+
+	return m.KNIClient.QueryPodNetwork(ctx, query)
+}
+
+func (m *KNINetworkService) SetupNodeNetwork(ctx context.Context, in *beta.SetupNodeNetworkRequest, opts ...grpc.CallOption) (*beta.SetupNodeNetworkResponse, error) {
+	return m.KNIClient.SetupNodeNetwork(ctx, in)
 }

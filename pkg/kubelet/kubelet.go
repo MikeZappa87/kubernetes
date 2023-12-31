@@ -31,7 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/MikeZappa87/kni-api/pkg/apis/runtime/beta"
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"github.com/google/go-cmp/cmp"
 	libcontaineruserns "github.com/opencontainers/runc/libcontainer/userns"
@@ -86,6 +85,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	"k8s.io/kubernetes/pkg/kubelet/kni"
 	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/remote"
 	"k8s.io/kubernetes/pkg/kubelet/kuberuntime"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
@@ -274,7 +274,7 @@ type Dependencies struct {
 	TLSOptions                *server.TLSOptions
 	RemoteRuntimeService      internalapi.RuntimeService
 	RemoteImageService        internalapi.ImageManagerService
-	networkService			  beta.KNIClient
+	networkService            kni.KNIService
 	PodStartupLatencyTracker  util.PodStartupLatencyTracker
 	NodeStartupLatencyTracker util.NodeStartupLatencyTracker
 	// remove it after cadvisor.UsingLegacyCadvisorStats dropped.
@@ -622,6 +622,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.resourceAnalyzer = serverstats.NewResourceAnalyzer(klet, kubeCfg.VolumeStatsAggPeriod.Duration, kubeDeps.Recorder)
 
 	klet.runtimeService = kubeDeps.RemoteRuntimeService
+
+	klet.networkService = kubeDeps.networkService
 
 	if kubeDeps.KubeClient != nil {
 		klet.runtimeClassManager = runtimeclass.NewManager(kubeDeps.KubeClient)
@@ -1146,6 +1148,8 @@ type Kubelet struct {
 
 	// Container runtime service (needed by container runtime Start()).
 	runtimeService internalapi.RuntimeService
+
+	networkService kni.KNIService
 
 	// reasonCache caches the failure reason of the last creation of all containers, which is
 	// used for generating ContainerStatus.
