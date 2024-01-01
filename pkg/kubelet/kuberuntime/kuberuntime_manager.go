@@ -1199,7 +1199,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		// host-network, we may use a stale IP.
 		if !kubecontainer.IsHostNetworkPod(pod) {
 			resp, err := m.AttachNetwork(ctx, &result, pod, podSandboxID)
-
+			
 			if err != nil {
 				return
 			}
@@ -1601,11 +1601,13 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	}
 
 	netns := ""
-
-	if val, ok := resp.Status.Annotations["netns"]; ok {
+	
+	if val, ok := resp.Info["netns"]; ok {
 		netns = val
 	} else {
-		result.Fail(errors.New("no netns from cri for pod, exiting"))
+		err := errors.New("no netns from cri for pod, exiting")
+
+		result.Fail(err)
 		return nil, err
 	}
 
@@ -1684,7 +1686,7 @@ func (m *kubeGenericRuntimeManager) convertKNIStatusToCRINetworkStatus(net *beta
 
 		return &runtimeapi.PodSandboxNetworkStatus{
 			Ip:            podIps[0].Ip,
-			AdditionalIps: podIps,
+			AdditionalIps: podIps[1:],
 		}
 	}
 

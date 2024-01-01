@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var FakePodSandboxIPs = []string{"192.168.192.168"}
+
 // FakeNetworkRuntimeService is a mock of KNIClient interface.
 type FakeNetworkRuntimeService struct {
 }
@@ -17,7 +19,9 @@ func NewNetworkRuntimeService() *FakeNetworkRuntimeService {
 }
 
 func (m *FakeNetworkRuntimeService) AttachNetwork(ctx context.Context, in *beta.AttachNetworkRequest, opts ...grpc.CallOption) (*beta.AttachNetworkResponse, error) {
-	return &beta.AttachNetworkResponse{}, nil
+	return &beta.AttachNetworkResponse{
+		Ipconfigs: genFakeIPConfig(),
+	}, nil
 }
 
 func (m *FakeNetworkRuntimeService) DetachNetwork(ctx context.Context, sandBoxId string) error {
@@ -29,9 +33,20 @@ func (m *FakeNetworkRuntimeService) QueryNodeNetworks(ctx context.Context) (*bet
 }
 
 func (m *FakeNetworkRuntimeService) QueryPodNetwork(ctx context.Context, sandboxId string) (*beta.QueryPodNetworkResponse, error) {
-	return &beta.QueryPodNetworkResponse{}, nil
+	return &beta.QueryPodNetworkResponse{
+		Ipconfigs: genFakeIPConfig(),
+	}, nil
 }
 
 func (m *FakeNetworkRuntimeService) SetupNodeNetwork(ctx context.Context, in *beta.SetupNodeNetworkRequest, opts ...grpc.CallOption) (*beta.SetupNodeNetworkResponse, error) {
 	return &beta.SetupNodeNetworkResponse{}, nil
+}
+
+func genFakeIPConfig() map[string] *beta.IPConfig {
+	ip := make(map[string]*beta.IPConfig)
+
+	ip["eth0"] = &beta.IPConfig{
+		Ip: FakePodSandboxIPs,
+	}
+	return ip
 }

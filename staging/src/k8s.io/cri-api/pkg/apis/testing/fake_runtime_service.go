@@ -302,8 +302,10 @@ func (r *FakeRuntimeService) PodSandboxStatus(_ context.Context, podSandboxID st
 		return nil, fmt.Errorf("pod sandbox %q not found", podSandboxID)
 	}
 
+	info := make(map[string]string)
+	info["netns"] = "/run/netns/test1"
 	status := s.PodSandboxStatus
-	return &runtimeapi.PodSandboxStatusResponse{Status: &status}, nil
+	return &runtimeapi.PodSandboxStatusResponse{Status: &status, Info: info}, nil
 }
 
 // ListPodSandbox returns the list of pod sandboxes in the FakeRuntimeService.

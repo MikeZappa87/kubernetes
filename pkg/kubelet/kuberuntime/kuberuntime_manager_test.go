@@ -49,6 +49,7 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	containertest "k8s.io/kubernetes/pkg/kubelet/container/testing"
+	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/testing"
 	proberesults "k8s.io/kubernetes/pkg/kubelet/prober/results"
 )
 
@@ -64,6 +65,7 @@ func createTestRuntimeManager() (*apitest.FakeRuntimeService, *apitest.FakeImage
 func customTestRuntimeManager(keyring *credentialprovider.BasicDockerKeyring) (*apitest.FakeRuntimeService, *apitest.FakeImageService, *kubeGenericRuntimeManager, error) {
 	fakeRuntimeService := apitest.NewFakeRuntimeService()
 	fakeImageService := apitest.NewFakeImageService()
+	fakeNetworkService := networkremote.NewNetworkRuntimeService()
 	// Only an empty machineInfo is needed here, because in unit test all containers are besteffort,
 	// data in machineInfo is not used. If burstable containers are used in unit test in the future,
 	// we may want to set memory capacity.
@@ -72,7 +74,7 @@ func customTestRuntimeManager(keyring *credentialprovider.BasicDockerKeyring) (*
 		MemoryCapacity: uint64(memoryCapacityQuantity.Value()),
 	}
 	osInterface := &containertest.FakeOS{}
-	manager, err := newFakeKubeRuntimeManager(fakeRuntimeService, fakeImageService, machineInfo, osInterface, &containertest.FakeRuntimeHelper{}, keyring, oteltrace.NewNoopTracerProvider().Tracer(""))
+	manager, err := newFakeKubeRuntimeManager(fakeRuntimeService, fakeImageService, machineInfo, osInterface, &containertest.FakeRuntimeHelper{}, keyring, oteltrace.NewNoopTracerProvider().Tracer(""), fakeNetworkService)
 	return fakeRuntimeService, fakeImageService, manager, err
 }
 
@@ -137,12 +139,17 @@ func makeFakePodSandbox(t *testing.T, m *kubeGenericRuntimeManager, template san
 			Metadata:  config.Metadata,
 			State:     template.state,
 			CreatedAt: template.createdAt,
+			Annotations: map[string]string{},
+			
 			Network: &runtimeapi.PodSandboxNetworkStatus{
-				Ip: apitest.FakePodSandboxIPs[0],
+				//Ip: apitest.FakePodSandboxIPs[0],
 			},
+			
 			Labels: config.Labels,
 		},
 	}
+
+	/*
 	// assign additional IPs
 	additionalIPs := apitest.FakePodSandboxIPs[1:]
 	additionalPodIPs := make([]*runtimeapi.PodIP, 0, len(additionalIPs))
@@ -152,6 +159,7 @@ func makeFakePodSandbox(t *testing.T, m *kubeGenericRuntimeManager, template san
 		})
 	}
 	podSandBoxStatus.Network.AdditionalIps = additionalPodIPs
+	*/
 	return podSandBoxStatus
 
 }
