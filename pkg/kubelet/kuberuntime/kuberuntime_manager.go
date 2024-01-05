@@ -1400,8 +1400,8 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	return
 }
 
-func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {
-
+func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {	
+	/*
 	netresp, err := m.networkService.QueryPodNetwork(context.TODO(), event.GetPodSandboxStatus().Id)
 
 	if err != nil {
@@ -1411,7 +1411,7 @@ func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.Containe
 	event.PodSandboxStatus.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
 
 	podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
-
+	*/
 	kubeContainerStatuses := []*kubecontainer.Status{}
 	for _, status := range event.ContainersStatuses {
 		kubeContainerStatuses = append(kubeContainerStatuses, m.convertToKubeContainerStatus(status))
@@ -1423,7 +1423,7 @@ func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.Containe
 		ID:                kubetypes.UID(event.PodSandboxStatus.Metadata.Uid),
 		Name:              event.PodSandboxStatus.Metadata.Name,
 		Namespace:         event.PodSandboxStatus.Metadata.Namespace,
-		IPs:               podIPs,
+		//IPs:               podIPs,
 		SandboxStatuses:   []*runtimeapi.PodSandboxStatus{event.PodSandboxStatus},
 		ContainerStatuses: kubeContainerStatuses,
 	}, nil
