@@ -1485,19 +1485,21 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 
 		}
 
-		netresp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
+		if !kubecontainer.IsHostNetworkPod(pod) {
+			netresp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
 
-		if err != nil {
-			klog.ErrorS(err, "QueryPodNetwork for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
-			return nil, err
-		}
+			if err != nil {
+				klog.ErrorS(err, "QueryPodNetwork for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
+				return nil, err
+			}
+	
+			resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
 
-		resp.Status.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
-
-		sandboxStatuses = append(sandboxStatuses, resp.Status)
-		// Only get pod IP from latest sandbox
-		if idx == 0 && resp.Status.State == runtimeapi.PodSandboxState_SANDBOX_READY {
-			podIPs = m.determinePodSandboxIPs(namespace, name, resp.GetStatus())
+			sandboxStatuses = append(sandboxStatuses, resp.Status)
+			// Only get pod IP from latest sandbox
+			if idx == 0 && resp.Status.State == runtimeapi.PodSandboxState_SANDBOX_READY {
+				podIPs = m.determinePodSandboxIPs(namespace, name, resp.GetStatus())
+			}
 		}
 
 		if idx == 0 && utilfeature.DefaultFeatureGate.Enabled(features.EventedPLEG) {

@@ -2889,14 +2889,23 @@ func (kl *Kubelet) updateRuntimeUp() {
 	if !kl.containerRuntimeReadyExpected {
 		klogErrorS = klog.V(4).ErrorS
 	}
-	networkReady := s.GetRuntimeCondition(kubecontainer.NetworkReady)
-	if networkReady == nil || !networkReady.Status {
-		klogErrorS(nil, "Container runtime network not ready", "networkReady", networkReady)
-		kl.runtimeState.setNetworkState(fmt.Errorf("container runtime network not ready: %v", networkReady))
+
+	n, err := kl.networkService.QueryNodeNetworks(ctx)
+
+	if err != nil || len(n.GetNetworks()) == 0 {
+		klogErrorS(nil, "network runtime network not ready", "networkReady")
+		kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
 	} else {
-		// Set nil if the container runtime network is ready.
-		kl.runtimeState.setNetworkState(nil)
+		net := n.GetNetworks()[0]
+
+		if !net.Ready {
+			klogErrorS(nil, "network runtime network not ready", "networkReady")
+			kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
+		} else {
+			kl.runtimeState.setNetworkState(nil)
+		}
 	}
+
 	// information in RuntimeReady condition will be propagated to NodeReady condition.
 	runtimeReady := s.GetRuntimeCondition(kubecontainer.RuntimeReady)
 	// If RuntimeReady is not set or is false, report an error.
