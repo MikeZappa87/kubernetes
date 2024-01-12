@@ -45,6 +45,8 @@ var (
 	ErrConfigPodSandbox = errors.New("ConfigPodSandboxError")
 	// ErrKillPodSandbox returned when runtime failed to stop pod's sandbox.
 	ErrKillPodSandbox = errors.New("KillPodSandboxError")
+	// ErrDetachNetwork returned when the network runtime failed to detach the network from the pod.
+	ErrDetachNetwork = errors.New("DetachNetworkError")
 )
 
 // SyncAction indicates different kind of actions in SyncPod() and KillPod(). Now there are only actions
