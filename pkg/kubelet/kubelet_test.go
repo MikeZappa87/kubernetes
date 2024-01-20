@@ -71,6 +71,7 @@ import (
 	fakeremote "k8s.io/kubernetes/pkg/kubelet/cri/remote/fake"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/images"
+	networkremote "k8s.io/kubernetes/pkg/kubelet/kni/remote"
 	"k8s.io/kubernetes/pkg/kubelet/kuberuntime"
 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
 	"k8s.io/kubernetes/pkg/kubelet/logs"
@@ -3200,6 +3201,8 @@ func TestSyncPodSpans(t *testing.T) {
 	imageSvc, err := remote.NewRemoteImageService(endpoint, 15*time.Second, tp)
 	assert.NoError(t, err)
 
+	netsvc, _ := networkremote.NewNetworkRuntimeService("",time.Minute)
+
 	kubelet.containerRuntime, err = kuberuntime.NewKubeGenericRuntimeManager(
 		kubelet.recorder,
 		kubelet.livenessManager,
@@ -3231,6 +3234,7 @@ func TestSyncPodSpans(t *testing.T) {
 		*kubeCfg.MemoryThrottlingFactor,
 		kubeletutil.NewPodStartupLatencyTracker(),
 		tp,
+		netsvc,
 	)
 	assert.NoError(t, err)
 
