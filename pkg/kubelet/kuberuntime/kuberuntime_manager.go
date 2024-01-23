@@ -358,6 +358,10 @@ func (m *kubeGenericRuntimeManager) Status(ctx context.Context) (*kubecontainer.
 		return nil, errors.New("runtime status is nil")
 	}
 
+	if !m.networkService.Up() {
+		return toKubeRuntimeStatus(resp.GetStatus(), nil), nil
+	}
+
 	kniresp, err := m.networkService.QueryNodeNetworks(ctx)
 
 	if err != nil {

@@ -2888,19 +2888,24 @@ func (kl *Kubelet) updateRuntimeUp() {
 		klogErrorS = klog.V(4).ErrorS
 	}
 
-	n, err := kl.networkService.QueryNodeNetworks(ctx)
-
-	if err != nil || len(n.GetNetworks()) == 0 {
+	if !kl.networkService.Up()  {
 		klogErrorS(nil, "network runtime network not ready", "networkReady")
 		kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
 	} else {
-		net := n.GetNetworks()[0]
+		n, err := kl.networkService.QueryNodeNetworks(ctx)
 
-		if !net.Ready {
+		if err != nil || len(n.GetNetworks()) == 0 {
 			klogErrorS(nil, "network runtime network not ready", "networkReady")
 			kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
 		} else {
-			kl.runtimeState.setNetworkState(nil)
+			net := n.GetNetworks()[0]
+	
+			if !net.Ready {
+				klogErrorS(nil, "network runtime network not ready", "networkReady")
+				kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
+			} else {
+				kl.runtimeState.setNetworkState(nil)
+			}
 		}
 	}
 

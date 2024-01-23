@@ -50,3 +50,7 @@ func genFakeIPConfig() map[string] *beta.IPConfig {
 	}
 	return ip
 }
+
+func (m *FakeNetworkRuntimeService) Up() bool {
+	return true
+}

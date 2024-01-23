@@ -2,6 +2,7 @@ package networkremote
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/MikeZappa87/kni-api/pkg/apis/runtime/beta"
@@ -101,4 +102,12 @@ func (m *KNINetworkService) QueryPodNetwork(ctx context.Context, sandboxId strin
 
 func (m *KNINetworkService) SetupNodeNetwork(ctx context.Context, in *beta.SetupNodeNetworkRequest, opts ...grpc.CallOption) (*beta.SetupNodeNetworkResponse, error) {
 	return m.KNIClient.SetupNodeNetwork(ctx, in)
+}
+
+func (m *KNINetworkService) Up() bool {
+	if _, err := os.Stat("/tmp/kni.sock"); err != nil  {
+		return false
+	}
+
+	return true
 }

@@ -19,4 +19,6 @@ type KNIService interface {
 		 opts ...grpc.CallOption) (*beta.SetupNodeNetworkResponse, error)
 
 	QueryNodeNetworks(ctx context.Context) (*beta.QueryNodeNetworksResponse, error)
+
+	Up() bool
 }
