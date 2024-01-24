@@ -11,6 +11,35 @@ service KNI {
     rpc QueryNodeNetworks(QueryNodeNetworksRequest) returns (QueryNodeNetworksResponse) {}
 }
 
+// DNSConfig specifies the DNS servers and search domains of a sandbox.
+message DNSConfig {
+    // List of DNS servers of the cluster.
+    repeated string servers = 1;
+    // List of DNS search domains of the cluster.
+    repeated string searches = 2;
+    // List of DNS options. See https://linux.die.net/man/5/resolv.conf
+    // for all available options.
+    repeated string options = 3;
+}
+
+enum Protocol {
+    TCP = 0;
+    UDP = 1;
+    SCTP = 2;
+}
+
+// PortMapping specifies the port mapping configurations of a sandbox.
+message PortMapping {
+    // Protocol of the port mapping.
+    Protocol protocol = 1;
+    // Port number within the container. Default: 0 (not specified).
+    int32 container_port = 2;
+    // Port number on the host. Default: 0 (not specified).
+    int32 host_port = 3;
+    // Host IP.
+    string host_ip = 4;
+}
+
 message QueryNodeNetworksRequest {
 
 }
@@ -44,9 +73,11 @@ message AttachNetworkRequest {
     string id = 2;
     string namespace = 3;
     Isolation isolation = 4;
-    map<string,string> labels = 5;
-    map<string,string> annotations = 6;
-    map<string,string> extradata = 7;
+    DNSConfig dns_config = 5;
+    repeated PortMapping port_mappings = 6;
+    map<string,string> labels = 7;
+    map<string,string> annotations = 8;
+    map<string,string> extradata = 9;
 }
     
 message AttachNetworkResponse {

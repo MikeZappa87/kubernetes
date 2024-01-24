@@ -111,3 +111,26 @@ func (m *kubeGenericRuntimeManager) toCRINetworkStatus(net *beta.QueryPodNetwork
 		Ip: "",
 	}
 }
+
+func toKNIDnsConfig(dns *runtimeapi.DNSConfig) *beta.DNSConfig {
+	return &beta.DNSConfig{
+		Servers:  dns.Servers,
+		Options:  dns.Options,
+		Searches: dns.Searches,
+	}
+}
+
+func toKNIPortMapping(mapping []*runtimeapi.PortMapping) []*beta.PortMapping {
+	var ports []*beta.PortMapping
+
+	for _, v := range mapping {
+		ports = append(ports, &beta.PortMapping{
+			Protocol:      beta.Protocol(v.Protocol),
+			ContainerPort: v.ContainerPort,
+			HostPort:      v.HostPort,
+			HostIp:        v.HostIp,
+		})
+	}
+
+	return ports
+}
