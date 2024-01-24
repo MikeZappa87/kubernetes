@@ -45,6 +45,10 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		return nil, err
 	}
 
+	if val, ok := resp.Info["cgroupPath"]; ok {
+		resp.Status.Annotations["cgroupPath"] = val
+	}
+
 	iso := beta.Isolation{
 		Type: "namespace",
 		Path: netns,
