@@ -14,7 +14,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 )
 
-
 func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *kubecontainer.PodSyncResult,
 	pod *v1.Pod, podSandboxID string) (*runtimeapi.PodSandboxStatus, error) {
 
@@ -34,31 +33,11 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		return nil, err
 	}
 
-	netns := ""
-	
-	if val, ok := resp.Info["netns"]; ok {
-		netns = val
-	} else {
-		err := errors.New("no netns from cri for pod, exiting")
-
-		result.Fail(err)
-		return nil, err
-	}
-
-	if val, ok := resp.Info["cgroupPath"]; ok {
-		resp.Status.Annotations["cgroupPath"] = val
-	}
-
-	iso := beta.Isolation{
-		Type: "namespace",
-		Path: netns,
-	}
-
 	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
-		Isolation:   &iso,
 		Id:          podSandboxID,
 		Labels:      resp.Status.GetLabels(),
 		Annotations: resp.Status.GetAnnotations(),
+		Extradata:   resp.Info,
 	})
 
 	if err != nil {
