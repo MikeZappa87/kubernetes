@@ -33,11 +33,36 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		return nil, err
 	}
 
+	dnsConfig, err := m.runtimeHelper.GetPodDNS(pod)
+	if err != nil {
+		return nil, err
+	}
+
+	portMappings := []*runtimeapi.PortMapping{}
+	for _, c := range pod.Spec.Containers {
+		containerPortMappings := kubecontainer.MakePortMappings(&c)
+
+		for idx := range containerPortMappings {
+			port := containerPortMappings[idx]
+			hostPort := int32(port.HostPort)
+			containerPort := int32(port.ContainerPort)
+			protocol := toRuntimeProtocol(port.Protocol)
+			portMappings = append(portMappings, &runtimeapi.PortMapping{
+				HostIp:        port.HostIP,
+				HostPort:      hostPort,
+				ContainerPort: containerPort,
+				Protocol:      protocol,
+			})
+		}
+	}
+
 	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
 		Id:          podSandboxID,
 		Labels:      resp.Status.GetLabels(),
 		Annotations: resp.Status.GetAnnotations(),
 		Extradata:   resp.Info,
+		DnsConfig:   toKNIDnsConfig(dnsConfig),
+		PortMappings: toKNIPortMapping(portMappings),
 	})
 
 	if err != nil {
