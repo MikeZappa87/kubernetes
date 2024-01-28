@@ -358,8 +358,12 @@ func (m *kubeGenericRuntimeManager) Status(ctx context.Context) (*kubecontainer.
 		return nil, errors.New("runtime status is nil")
 	}
 
+	return toKubeRuntimeStatus(resp.GetStatus()), nil
+}
+
+func (m *kubeGenericRuntimeManager) NetworkStatus(ctx context.Context) (*kubecontainer.RuntimeStatus, error) {
 	if !m.networkService.Up() {
-		return toKubeRuntimeStatus(resp.GetStatus(), nil), nil
+		return nil, errors.New("network runtime not up")
 	}
 
 	kniresp, err := m.networkService.QueryNodeNetworks(ctx)
@@ -372,7 +376,7 @@ func (m *kubeGenericRuntimeManager) Status(ctx context.Context) (*kubecontainer.
 		return nil, errors.New("network runtime response is nil")
 	}
 
-	return toKubeRuntimeStatus(resp.GetStatus(), kniresp.GetNetworks()), nil
+	return toKubeNetworkStatus(kniresp.GetNetworks()), nil
 }
 
 // GetPods returns a list of containers grouped by pods. The boolean parameter

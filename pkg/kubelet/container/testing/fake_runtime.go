@@ -209,6 +209,14 @@ func (f *FakeRuntime) Status(_ context.Context) (*kubecontainer.RuntimeStatus, e
 	return f.RuntimeStatus, f.StatusErr
 }
 
+func (f *FakeRuntime) NetworkStatus(ctx context.Context) (*kubecontainer.RuntimeStatus, error) {
+	f.Lock()
+	defer f.Unlock()
+
+	f.CalledFunctions = append(f.CalledFunctions, "Status")
+	return f.RuntimeStatus, f.StatusErr
+}
+
 func (f *FakeRuntime) GetPods(_ context.Context, all bool) ([]*kubecontainer.Pod, error) {
 	f.Lock()
 	defer f.Unlock()

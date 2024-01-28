@@ -2888,25 +2888,25 @@ func (kl *Kubelet) updateRuntimeUp() {
 		klogErrorS = klog.V(4).ErrorS
 	}
 
-	if !kl.networkService.Up()  {
+	// This doesnt belong under container runtime. However this is a POC
+	n, err := kl.containerRuntime.NetworkStatus(ctx)
+
+	if err != nil {
 		klogErrorS(nil, "network runtime network not ready", "networkReady")
 		kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
 	} else {
-		n, err := kl.networkService.QueryNodeNetworks(ctx)
+		// This will need to change to support multiple networks
+		networkRuntimeready := n.GetRuntimeCondition(kubecontainer.NetworkReady)
 
-		if err != nil || len(n.GetNetworks()) == 0 {
+		if networkRuntimeready == nil || !networkRuntimeready.Status {
 			klogErrorS(nil, "network runtime network not ready", "networkReady")
 			kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
 		} else {
-			net := n.GetNetworks()[0]
-	
-			if !net.Ready {
-				klogErrorS(nil, "network runtime network not ready", "networkReady")
-				kl.runtimeState.setNetworkState(fmt.Errorf("network runtime network not ready"))
-			} else {
-				kl.runtimeState.setNetworkState(nil)
-			}
+			kl.runtimeState.setNetworkState(nil)
 		}
+
+		// We probably should mark the 'primary' network or use index 0 is the primary network. 
+		// That needs to be ready == true
 	}
 
 	// information in RuntimeReady condition will be propagated to NodeReady condition.

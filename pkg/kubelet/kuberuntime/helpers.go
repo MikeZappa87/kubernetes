@@ -201,7 +201,7 @@ func parsePodUIDFromLogsDirectory(name string) types.UID {
 }
 
 // toKubeRuntimeStatus converts the runtimeapi.RuntimeStatus to kubecontainer.RuntimeStatus.
-func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus, networks []*beta.Network) *kubecontainer.RuntimeStatus {
+func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus) *kubecontainer.RuntimeStatus {
 	conditions := []kubecontainer.RuntimeCondition{}
 	for _, c := range status.GetConditions() {
 		conditions = append(conditions, kubecontainer.RuntimeCondition{
@@ -212,10 +212,19 @@ func toKubeRuntimeStatus(status *runtimeapi.RuntimeStatus, networks []*beta.Netw
 		})
 	}
 
+	return &kubecontainer.RuntimeStatus{Conditions: conditions}
+}
+
+func toKubeNetworkStatus(networks []*beta.Network) *kubecontainer.RuntimeStatus{
+	conditions := []kubecontainer.RuntimeCondition{}
+
 	for _, v := range networks {
 		conditions = append(conditions, kubecontainer.RuntimeCondition{
 			Type:    kubecontainer.RuntimeConditionType(runtimeapi.NetworkReady),
 			Status:  v.Ready,
+			// Might be able to make use of the Reason/Message fields here.
+			// How do we handle out of IP addresses? The running pods are fine, just nothing else
+			// can be scheduled 
 		})
 	}
 

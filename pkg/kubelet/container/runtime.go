@@ -135,6 +135,8 @@ type Runtime interface {
 	ListMetricDescriptors(ctx context.Context) ([]*runtimeapi.MetricDescriptor, error)
 	// ListPodSandboxMetrics retrieves the metrics for all pod sandboxes.
 	ListPodSandboxMetrics(ctx context.Context) ([]*runtimeapi.PodSandboxMetrics, error)
+
+	NetworkStatus(ctx context.Context) (*RuntimeStatus, error)
 }
 
 // StreamingRuntime is the interface implemented by runtimes that handle the serving of the

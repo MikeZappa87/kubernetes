@@ -369,6 +369,15 @@ func (m *MockRuntime) Status(ctx context.Context) (*container.RuntimeStatus, err
 	return ret0, ret1
 }
 
+// Status mocks base method.
+func (m *MockRuntime) NetworkStatus(ctx context.Context) (*container.RuntimeStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Status", ctx)
+	ret0, _ := ret[0].(*container.RuntimeStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // Status indicates an expected call of Status.
 func (mr *MockRuntimeMockRecorder) Status(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
