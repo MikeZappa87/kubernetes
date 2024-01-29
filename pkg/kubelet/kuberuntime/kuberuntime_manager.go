@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -1206,7 +1207,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		// host-network, we may use a stale IP.
 		if !kubecontainer.IsHostNetworkPod(pod) {
 			resp, err := m.AttachNetwork(ctx, &result, pod, podSandboxID)
-			
+
 			if err != nil {
 				return
 			}
@@ -1407,17 +1408,17 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	return
 }
 
-func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {	
+func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.ContainerEventResponse) (*kubecontainer.PodStatus, error) {
 	/*
-	netresp, err := m.networkService.QueryPodNetwork(context.TODO(), event.GetPodSandboxStatus().Id)
+		netresp, err := m.networkService.QueryPodNetwork(context.TODO(), event.GetPodSandboxStatus().Id)
 
-	if err != nil {
-		return nil, fmt.Errorf("unable to query pod network. %v", err)
-	}
+		if err != nil {
+			return nil, fmt.Errorf("unable to query pod network. %v", err)
+		}
 
-	event.PodSandboxStatus.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
+		event.PodSandboxStatus.Network = m.convertKNIStatusToCRINetworkStatus(netresp, "eth0")
 
-	podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
+		podIPs := m.determinePodSandboxIPs(event.PodSandboxStatus.Metadata.Namespace, event.PodSandboxStatus.Metadata.Name, event.PodSandboxStatus)
 	*/
 	kubeContainerStatuses := []*kubecontainer.Status{}
 	for _, status := range event.ContainersStatuses {
@@ -1427,9 +1428,9 @@ func (m *kubeGenericRuntimeManager) GeneratePodStatus(event *runtimeapi.Containe
 	sort.Sort(containerStatusByCreated(kubeContainerStatuses))
 
 	return &kubecontainer.PodStatus{
-		ID:                kubetypes.UID(event.PodSandboxStatus.Metadata.Uid),
-		Name:              event.PodSandboxStatus.Metadata.Name,
-		Namespace:         event.PodSandboxStatus.Metadata.Namespace,
+		ID:        kubetypes.UID(event.PodSandboxStatus.Metadata.Uid),
+		Name:      event.PodSandboxStatus.Metadata.Name,
+		Namespace: event.PodSandboxStatus.Metadata.Namespace,
 		//IPs:               podIPs,
 		SandboxStatuses:   []*runtimeapi.PodSandboxStatus{event.PodSandboxStatus},
 		ContainerStatuses: kubeContainerStatuses,
@@ -1492,14 +1493,27 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 
 		}
 
-		if !kubecontainer.IsHostNetworkPod(pod) {
+		// Refactor to remove the duplication
+		if resp.Status.Linux.Namespaces.Options.Network == runtimeapi.NamespaceMode_NODE {
+			// Get eth0 IP address
+			// We don't want to hardcode this
+			ips, err := getIPAddresses("eth0")
+
+			if err != nil {
+				return nil, err
+			}
+
+			sandboxStatuses = append(sandboxStatuses, resp.Status)
+
+			podIPs = append(podIPs, ips[0])
+		} else {
 			netresp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
 
 			if err != nil {
 				klog.ErrorS(err, "QueryPodNetwork for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
 				return nil, err
 			}
-	
+
 			resp.Status.Network = m.toCRINetworkStatus(netresp, "eth0")
 
 			sandboxStatuses = append(sandboxStatuses, resp.Status)
@@ -1559,6 +1573,36 @@ func (m *kubeGenericRuntimeManager) GetPodStatus(ctx context.Context, uid kubety
 	}, nil
 }
 
+func getIPAddresses(interfaceName string) ([]string, error) {
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return nil, err
+	}
+
+	var ips []string
+	// Iterate over all interface addresses
+	for _, addr := range addrs {
+		switch v := addr.(type) {
+		case *net.IPNet:
+			// Check if it's not a loopback address and is IPv4
+			if !v.IP.IsLoopback() && v.IP.To4() != nil {
+				ips = append(ips, v.IP.String())
+			}
+		}
+	}
+
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no IPv4 addresses found for interface %s", interfaceName)
+	}
+
+	return ips, nil
+}
+
 // GarbageCollect removes dead containers using the specified container gc policy.
 func (m *kubeGenericRuntimeManager) GarbageCollect(ctx context.Context, gcPolicy kubecontainer.GCPolicy, allSourcesReady bool, evictNonDeletedPods bool) error {
 	return m.containerGC.GarbageCollect(ctx, gcPolicy, allSourcesReady, evictNonDeletedPods)
@@ -1589,4 +1633,3 @@ func (m *kubeGenericRuntimeManager) ListMetricDescriptors(ctx context.Context) (
 func (m *kubeGenericRuntimeManager) ListPodSandboxMetrics(ctx context.Context) ([]*runtimeapi.PodSandboxMetrics, error) {
 	return m.runtimeService.ListPodSandboxMetrics(ctx)
 }
-
