@@ -66,8 +66,20 @@ func (m *kubeGenericRuntimeManager) createPodSandbox(ctx context.Context, pod *v
 		}
 	}
 
+	if !kubecontainer.IsHostNetworkPod(pod) {
+		ns, err := m.networkService.CreateNetwork(ctx, pod.Namespace, pod.Name)
+
+		if err != nil {
+			return "", err.Error(), err
+		}
+
+		podSandboxConfig.Annotations["kni.dev/netns"] = ns.GetNetnsPath()
+	}
+
 	podSandBoxID, err := m.runtimeService.RunPodSandbox(ctx, podSandboxConfig, runtimeHandler)
 	if err != nil {
+		m.networkService.DeleteNetworkByPodName(ctx, pod.Name, pod.Namespace)
+
 		message := fmt.Sprintf("Failed to create sandbox for pod %q: %v", format.Pod(pod), err)
 		klog.ErrorS(err, "Failed to create sandbox for pod", "pod", klog.KObj(pod))
 		return "", message, err

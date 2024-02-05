@@ -57,12 +57,14 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	}
 
 	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
-		Id:          podSandboxID,
-		Labels:      resp.Status.GetLabels(),
-		Annotations: resp.Status.GetAnnotations(),
-		Extradata:   resp.Info,
-		DnsConfig:   toKNIDnsConfig(dnsConfig),
+		Id:           podSandboxID,
+		Labels:       resp.Status.GetLabels(),
+		Annotations:  resp.Status.GetAnnotations(),
+		Extradata:    resp.Info,
+		DnsConfig:    toKNIDnsConfig(dnsConfig),
 		PortMappings: toKNIPortMapping(portMappings),
+		Name: 		  pod.Name,
+		Namespace:    pod.Namespace,
 	})
 
 	if err != nil {

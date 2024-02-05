@@ -1397,6 +1397,13 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 
 				continue
 			}
+
+			if err := m.networkService.DeleteNetworkById(ctx, podSandbox.ID.ID); err != nil {
+				killSandboxResult.Fail(kubecontainer.ErrDeleteNetwork, err.Error())
+				klog.ErrorS(nil, "Failed to delete network", "podSandboxID", podSandbox.ID)
+
+				continue
+			}
 		}
 
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {

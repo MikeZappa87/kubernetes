@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	KNI_CreateNetwork_FullMethodName     = "/kni.KNI/CreateNetwork"
+	KNI_DeleteNetwork_FullMethodName     = "/kni.KNI/DeleteNetwork"
 	KNI_AttachNetwork_FullMethodName     = "/kni.KNI/AttachNetwork"
 	KNI_DetachNetwork_FullMethodName     = "/kni.KNI/DetachNetwork"
 	KNI_QueryPodNetwork_FullMethodName   = "/kni.KNI/QueryPodNetwork"
@@ -30,6 +32,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type KNIClient interface {
+	CreateNetwork(ctx context.Context, in *CreateNetworkRequest, opts ...grpc.CallOption) (*CreateNetworkResponse, error)
+	DeleteNetwork(ctx context.Context, in *DeleteNetworkRequest, opts ...grpc.CallOption) (*DeleteNetworkResponse, error)
 	AttachNetwork(ctx context.Context, in *AttachNetworkRequest, opts ...grpc.CallOption) (*AttachNetworkResponse, error)
 	DetachNetwork(ctx context.Context, in *DetachNetworkRequest, opts ...grpc.CallOption) (*DetachNetworkResponse, error)
 	QueryPodNetwork(ctx context.Context, in *QueryPodNetworkRequest, opts ...grpc.CallOption) (*QueryPodNetworkResponse, error)
@@ -43,6 +47,24 @@ type kNIClient struct {
 
 func NewKNIClient(cc grpc.ClientConnInterface) KNIClient {
 	return &kNIClient{cc}
+}
+
+func (c *kNIClient) CreateNetwork(ctx context.Context, in *CreateNetworkRequest, opts ...grpc.CallOption) (*CreateNetworkResponse, error) {
+	out := new(CreateNetworkResponse)
+	err := c.cc.Invoke(ctx, KNI_CreateNetwork_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kNIClient) DeleteNetwork(ctx context.Context, in *DeleteNetworkRequest, opts ...grpc.CallOption) (*DeleteNetworkResponse, error) {
+	out := new(DeleteNetworkResponse)
+	err := c.cc.Invoke(ctx, KNI_DeleteNetwork_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *kNIClient) AttachNetwork(ctx context.Context, in *AttachNetworkRequest, opts ...grpc.CallOption) (*AttachNetworkResponse, error) {
@@ -94,6 +116,8 @@ func (c *kNIClient) QueryNodeNetworks(ctx context.Context, in *QueryNodeNetworks
 // All implementations should embed UnimplementedKNIServer
 // for forward compatibility
 type KNIServer interface {
+	CreateNetwork(context.Context, *CreateNetworkRequest) (*CreateNetworkResponse, error)
+	DeleteNetwork(context.Context, *DeleteNetworkRequest) (*DeleteNetworkResponse, error)
 	AttachNetwork(context.Context, *AttachNetworkRequest) (*AttachNetworkResponse, error)
 	DetachNetwork(context.Context, *DetachNetworkRequest) (*DetachNetworkResponse, error)
 	QueryPodNetwork(context.Context, *QueryPodNetworkRequest) (*QueryPodNetworkResponse, error)
@@ -105,6 +129,12 @@ type KNIServer interface {
 type UnimplementedKNIServer struct {
 }
 
+func (UnimplementedKNIServer) CreateNetwork(context.Context, *CreateNetworkRequest) (*CreateNetworkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateNetwork not implemented")
+}
+func (UnimplementedKNIServer) DeleteNetwork(context.Context, *DeleteNetworkRequest) (*DeleteNetworkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteNetwork not implemented")
+}
 func (UnimplementedKNIServer) AttachNetwork(context.Context, *AttachNetworkRequest) (*AttachNetworkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AttachNetwork not implemented")
 }
@@ -130,6 +160,42 @@ type UnsafeKNIServer interface {
 
 func RegisterKNIServer(s grpc.ServiceRegistrar, srv KNIServer) {
 	s.RegisterService(&KNI_ServiceDesc, srv)
+}
+
+func _KNI_CreateNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateNetworkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KNIServer).CreateNetwork(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KNI_CreateNetwork_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KNIServer).CreateNetwork(ctx, req.(*CreateNetworkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KNI_DeleteNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteNetworkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KNIServer).DeleteNetwork(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KNI_DeleteNetwork_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KNIServer).DeleteNetwork(ctx, req.(*DeleteNetworkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _KNI_AttachNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -229,6 +295,14 @@ var KNI_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "kni.KNI",
 	HandlerType: (*KNIServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateNetwork",
+			Handler:    _KNI_CreateNetwork_Handler,
+		},
+		{
+			MethodName: "DeleteNetwork",
+			Handler:    _KNI_DeleteNetwork_Handler,
+		},
 		{
 			MethodName: "AttachNetwork",
 			Handler:    _KNI_AttachNetwork_Handler,

@@ -21,4 +21,10 @@ type KNIService interface {
 	QueryNodeNetworks(ctx context.Context) (*beta.QueryNodeNetworksResponse, error)
 
 	Up() bool
+
+	CreateNetwork(ctx context.Context, namespace, name string) (*beta.CreateNetworkResponse, error)
+
+	DeleteNetworkById(ctx context.Context, sandboxId string) error
+
+	DeleteNetworkByPodName(ctx context.Context, name, namespace string) error
 }

@@ -111,3 +111,27 @@ func (m *KNINetworkService) Up() bool {
 
 	return true
 }
+
+func (m *KNINetworkService) CreateNetwork(ctx context.Context, namespace, name string) (*beta.CreateNetworkResponse, error) {
+	return m.KNIClient.CreateNetwork(ctx, &beta.CreateNetworkRequest{
+		Name: name,
+		Namespace: namespace,
+	})
+}
+
+func (m *KNINetworkService) DeleteNetworkById(ctx context.Context, podSandBoxID string) error {
+	_, err := m.KNIClient.DeleteNetwork(ctx, &beta.DeleteNetworkRequest{
+		Id: podSandBoxID,
+	})
+	
+	return err
+}
+
+func (m *KNINetworkService) DeleteNetworkByPodName(ctx context.Context, name, namespace string) error {
+	_, err := m.KNIClient.DeleteNetwork(ctx, &beta.DeleteNetworkRequest{
+		Name: name,
+		Namespace: namespace,
+	})
+	
+	return err
+}

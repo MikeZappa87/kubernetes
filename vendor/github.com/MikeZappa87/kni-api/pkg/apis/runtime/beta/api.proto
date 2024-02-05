@@ -4,6 +4,8 @@ package kni;
 option go_package = "pkg/apis/runtime/beta";
 
 service KNI {
+    rpc CreateNetwork(CreateNetworkRequest) returns (CreateNetworkResponse) {} //MVP
+    rpc DeleteNetwork(DeleteNetworkRequest) returns (DeleteNetworkResponse) {} //MVP
     rpc AttachNetwork(AttachNetworkRequest) returns (AttachNetworkResponse) {} //MVP
     rpc DetachNetwork(DetachNetworkRequest) returns (DetachNetworkResponse) {} //MVP
     rpc QueryPodNetwork(QueryPodNetworkRequest) returns (QueryPodNetworkResponse) {} //MVP
@@ -11,6 +13,81 @@ service KNI {
     rpc QueryNodeNetworks(QueryNodeNetworksRequest) returns (QueryNodeNetworksResponse) {}
 }
 
+message CreateNetworkRequest {
+    string name = 1;
+    string uid = 2;
+    string namespace = 3;
+    string netns_path_prefix = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> extradata = 7;
+}
+
+message CreateNetworkResponse {
+    string netns_path = 1;
+    map<string,string> extradata = 2;
+}
+
+message DeleteNetworkRequest {
+    string id = 1;
+    string name = 2;
+    string namespace = 3;
+    string netns_path = 4;
+    map<string,string> extradata = 5;
+}
+
+message DeleteNetworkResponse {
+
+}
+
+message AttachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    DNSConfig dns_config = 5;
+    repeated PortMapping port_mappings = 6;
+    map<string,string> labels = 7;
+    map<string,string> annotations = 8;
+    map<string,string> extradata = 9;
+}
+    
+message AttachNetworkResponse {
+    map<string, IPConfig> ipconfigs = 1;
+    map<string,string> extradata = 2;
+}
+    
+message DetachNetworkRequest {
+    string name = 1;
+    string id = 2;
+    string namespace = 3;
+    Isolation isolation = 4;
+    map<string,string> labels = 5;
+    map<string,string> annotations = 6;
+    map<string,string> extradata = 7;
+}
+    
+message DetachNetworkResponse {
+}
+    
+message IPConfig {
+    repeated string ip = 1;
+    string mac = 2;
+    map<string,string> extradata = 3;
+}
+    
+message Network {
+    string name = 1;
+    bool ready = 2;
+    map<string,string> extradata = 3;
+}
+    
+message Isolation {
+    string path = 1;
+    string type = 2; //Network Namespace, kernel, …
+    map<string,string> extradata = 3;
+}
+    
 // DNSConfig specifies the DNS servers and search domains of a sandbox.
 message DNSConfig {
     // List of DNS servers of the cluster.
@@ -67,52 +144,3 @@ message QueryPodNetworkResponse {
     map<string, IPConfig> ipconfigs = 1;
     map<string,string> extradata = 2;
 }
-
-message AttachNetworkRequest {
-    string name = 1;
-    string id = 2;
-    string namespace = 3;
-    Isolation isolation = 4;
-    DNSConfig dns_config = 5;
-    repeated PortMapping port_mappings = 6;
-    map<string,string> labels = 7;
-    map<string,string> annotations = 8;
-    map<string,string> extradata = 9;
-}
-    
-message AttachNetworkResponse {
-    map<string, IPConfig> ipconfigs = 1;
-    map<string,string> extradata = 2;
-}
-    
-message DetachNetworkRequest {
-    string name = 1;
-    string id = 2;
-    string namespace = 3;
-    Isolation isolation = 4;
-    map<string,string> labels = 5;
-    map<string,string> annotations = 6;
-    map<string,string> extradata = 7;
-}
-    
-message DetachNetworkResponse {
-}
-    
-message IPConfig {
-    repeated string ip = 1;
-    string mac = 2;
-    map<string,string> extradata = 3;
-}
-    
-message Network {
-    string name = 1;
-    bool ready = 2;
-    map<string,string> extradata = 3;
-}
-    
-message Isolation {
-    string path = 1;
-    string type = 2; //Network Namespace, kernel, …
-    map<string,string> extradata = 3;
-}
-    

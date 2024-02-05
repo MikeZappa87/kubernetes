@@ -54,3 +54,15 @@ func genFakeIPConfig() map[string] *beta.IPConfig {
 func (m *FakeNetworkRuntimeService) Up() bool {
 	return true
 }
+
+func (m *FakeNetworkRuntimeService) CreateNetwork(ctx context.Context, namespace, name string) (*beta.CreateNetworkResponse, error) {
+	return &beta.CreateNetworkResponse{}, nil
+}
+
+func (m *FakeNetworkRuntimeService) DeleteNetworkById(ctx context.Context, podSandBoxID string) error {
+	return nil
+}
+
+func (m *FakeNetworkRuntimeService) DeleteNetworkByPodName(ctx context.Context, name, namespace string) error {
+	return nil
+}
