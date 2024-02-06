@@ -70,6 +70,8 @@ func (m *kubeGenericRuntimeManager) createPodSandbox(ctx context.Context, pod *v
 		ns, err := m.networkService.CreateNetwork(ctx, pod.Namespace, pod.Name)
 
 		if err != nil {
+			m.networkService.DeleteNetworkByPodName(ctx, pod.Name, pod.Namespace)
+
 			return "", err.Error(), err
 		}
 

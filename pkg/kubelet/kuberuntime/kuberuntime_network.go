@@ -76,6 +76,8 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkAttach, "Unable to attach network to pod: %v", err)
 		klog.ErrorS(err, "Failed to attach pod network; Skipping pod", "pod", klog.KObj(pod))
 		result.Fail(err)
+
+		return nil, err
 	}
 
 	netResp, err := m.networkService.QueryPodNetwork(ctx, podSandboxID)
@@ -89,6 +91,8 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedNetworkPodStatus, "Unable to query pod network status: %v", err)
 		klog.ErrorS(err, "Failed to query pod network status; Skipping pod", "pod", klog.KObj(pod))
 		result.Fail(err)
+
+		return nil, err
 	}
 
 	resp.Status.Network = m.toCRINetworkStatus(netResp, "eth0")
