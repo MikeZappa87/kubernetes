@@ -6,8 +6,8 @@ option go_package = "pkg/apis/runtime/beta";
 service KNI {
     rpc CreateNetwork(CreateNetworkRequest) returns (CreateNetworkResponse) {} //MVP
     rpc DeleteNetwork(DeleteNetworkRequest) returns (DeleteNetworkResponse) {} //MVP
-    rpc AttachNetwork(AttachNetworkRequest) returns (AttachNetworkResponse) {} //MVP
-    rpc DetachNetwork(DetachNetworkRequest) returns (DetachNetworkResponse) {} //MVP
+    rpc AttachInterface(AttachInterfaceRequest) returns (AttachInterfaceResponse) {} //MVP
+    rpc DetachInterface(DetachInterfaceRequest) returns (DetachInterfaceResponse) {} //MVP
     rpc QueryPodNetwork(QueryPodNetworkRequest) returns (QueryPodNetworkResponse) {} //MVP
     rpc SetupNodeNetwork(SetupNodeNetworkRequest) returns (SetupNodeNetworkResponse) {}
     rpc QueryNodeNetworks(QueryNodeNetworksRequest) returns (QueryNodeNetworksResponse) {}
@@ -40,7 +40,7 @@ message DeleteNetworkResponse {
 
 }
 
-message AttachNetworkRequest {
+message AttachInterfaceRequest {
     string name = 1;
     string id = 2;
     string namespace = 3;
@@ -52,12 +52,12 @@ message AttachNetworkRequest {
     map<string,string> extradata = 9;
 }
     
-message AttachNetworkResponse {
+message AttachInterfaceResponse {
     map<string, IPConfig> ipconfigs = 1;
     map<string,string> extradata = 2;
 }
     
-message DetachNetworkRequest {
+message DetachInterfaceRequest {
     string name = 1;
     string id = 2;
     string namespace = 3;
@@ -67,7 +67,7 @@ message DetachNetworkRequest {
     map<string,string> extradata = 7;
 }
     
-message DetachNetworkResponse {
+message DetachInterfaceResponse {
 }
     
 message IPConfig {
