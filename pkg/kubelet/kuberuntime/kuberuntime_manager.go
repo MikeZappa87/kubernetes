@@ -1206,7 +1206,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
 		if !kubecontainer.IsHostNetworkPod(pod) {
-			resp, err := m.AttachNetwork(ctx, &result, pod, podSandboxID)
+			resp, err := m.AttachInterface(ctx, &result, pod, podSandboxID)
 
 			if err != nil {
 				return
@@ -1391,7 +1391,7 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
 		if !kubecontainer.IsHostNetworkPod(pod) {
-			if err := m.DetachNetwork(ctx, podSandbox.ID.ID); err != nil {
+			if err := m.DetachInterface(ctx, podSandbox.ID.ID); err != nil {
 				killSandboxResult.Fail(kubecontainer.ErrDetachNetwork, err.Error())
 				klog.ErrorS(nil, "Failed to detach sandbox from network", "podSandboxID", podSandbox.ID)
 

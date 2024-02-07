@@ -18,13 +18,13 @@ func NewNetworkRuntimeService() *FakeNetworkRuntimeService {
 	return &FakeNetworkRuntimeService{}
 }
 
-func (m *FakeNetworkRuntimeService) AttachNetwork(ctx context.Context, in *beta.AttachNetworkRequest, opts ...grpc.CallOption) (*beta.AttachNetworkResponse, error) {
-	return &beta.AttachNetworkResponse{
+func (m *FakeNetworkRuntimeService) AttachInterface(ctx context.Context, in *beta.AttachInterfaceRequest, opts ...grpc.CallOption) (*beta.AttachInterfaceResponse, error) {
+	return &beta.AttachInterfaceResponse{
 		Ipconfigs: genFakeIPConfig(),
 	}, nil
 }
 
-func (m *FakeNetworkRuntimeService) DetachNetwork(ctx context.Context, sandBoxId string) error {
+func (m *FakeNetworkRuntimeService) DetachInterface(ctx context.Context, sandBoxId string) error {
 	return nil
 }
 

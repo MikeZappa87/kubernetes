@@ -8,10 +8,10 @@ import (
 )
 
 type KNIService interface {
-	AttachNetwork(ctx context.Context, in *beta.AttachNetworkRequest,
-		opts ...grpc.CallOption) (*beta.AttachNetworkResponse, error)
+	AttachInterface(ctx context.Context, in *beta.AttachInterfaceRequest,
+		opts ...grpc.CallOption) (*beta.AttachInterfaceResponse, error)
 
-	DetachNetwork(ctx context.Context, sandboxId string) error
+	DetachInterface(ctx context.Context, sandboxId string) error
 	
 	QueryPodNetwork(ctx context.Context, sandboxId string) (*beta.QueryPodNetworkResponse, error)
 

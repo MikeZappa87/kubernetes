@@ -14,7 +14,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 )
 
-func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *kubecontainer.PodSyncResult,
+func (m *kubeGenericRuntimeManager) AttachInterface(ctx context.Context, result *kubecontainer.PodSyncResult,
 	pod *v1.Pod, podSandboxID string) (*runtimeapi.PodSandboxStatus, error) {
 
 	resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
@@ -56,7 +56,7 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 		}
 	}
 
-	_, err = m.networkService.AttachNetwork(ctx, &beta.AttachNetworkRequest{
+	_, err = m.networkService.AttachInterface(ctx, &beta.AttachInterfaceRequest{
 		Id:           podSandboxID,
 		Labels:       resp.Status.GetLabels(),
 		Annotations:  resp.Status.GetAnnotations(),
@@ -100,8 +100,8 @@ func (m *kubeGenericRuntimeManager) AttachNetwork(ctx context.Context, result *k
 	return resp.Status, nil
 }
 
-func (m *kubeGenericRuntimeManager) DetachNetwork(ctx context.Context, podSandboxId string) error {
-	err := m.networkService.DetachNetwork(ctx, podSandboxId)
+func (m *kubeGenericRuntimeManager) DetachInterface(ctx context.Context, podSandboxId string) error {
+	err := m.networkService.DetachInterface(ctx, podSandboxId)
 
 	if err != nil {
 		return err

@@ -65,17 +65,17 @@ func NewNetworkRuntimeService(endpoint string, connectionTimeout time.Duration) 
 	return &kni, nil
 }
 
-func (m *KNINetworkService) AttachNetwork(ctx context.Context, in *beta.AttachNetworkRequest, opts ...grpc.CallOption) (*beta.AttachNetworkResponse, error) {
-	return m.KNIClient.AttachNetwork(ctx, in)
+func (m *KNINetworkService) AttachInterface(ctx context.Context, in *beta.AttachInterfaceRequest, opts ...grpc.CallOption) (*beta.AttachInterfaceResponse, error) {
+	return m.KNIClient.AttachInterface(ctx, in)
 }
 
-func (m *KNINetworkService) DetachNetwork(ctx context.Context, sandBoxId string) error {
+func (m *KNINetworkService) DetachInterface(ctx context.Context, sandBoxId string) error {
 
-	det := &beta.DetachNetworkRequest{
+	det := &beta.DetachInterfaceRequest{
 		Id: sandBoxId,
 	}
 
-	_, err := m.KNIClient.DetachNetwork(ctx, det)
+	_, err := m.KNIClient.DetachInterface(ctx, det)
 
 	if err != nil {
 		return err
