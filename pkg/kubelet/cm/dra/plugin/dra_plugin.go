@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"k8s.io/klog/v2"
@@ -146,6 +147,32 @@ func (p *DRAPlugin) NodeUnprepareResources(
 		return nil, fmt.Errorf("internal error: unsupported chosen service: %q", p.chosenService)
 	}
 	logger.V(4).Info("Done calling NodeUnprepareResources rpc", "response", response, "err", err)
+	return response, err
+}
+
+// NodeConfigurePodResources configures the resources used by a pod.
+// This RPC is only available in the v1 API; older plugins report it as
+// Unimplemented and are left on the existing prepare/unprepare path.
+func (p *DRAPlugin) NodeConfigurePodResources(
+	ctx context.Context,
+	req *drapbv1.NodeConfigurePodResourcesRequest,
+	opts ...grpc.CallOption,
+) (*drapbv1.NodeConfigurePodResourcesResponse, error) {
+	logger := klog.FromContext(ctx).WithName("dra-plugin")
+	logger = klog.LoggerWithValues(logger, "driverName", p.driverName, "endpoint", p.endpoint)
+	ctx = klog.NewContext(ctx, logger)
+	logger.V(4).Info("Calling NodeConfigurePodResources rpc", "request", req)
+
+	if p.chosenService != drapbv1.DRAPluginService {
+		return nil, status.Error(codes.Unimplemented, "NodeConfigurePodResources requires the v1 DRAPlugin service")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, p.clientCallTimeout)
+	defer cancel()
+
+	client := drapbv1.NewDRAPluginClient(p.conn)
+	response, err := client.NodeConfigurePodResources(ctx, req, opts...)
+	logger.V(4).Info("Done calling NodeConfigurePodResources rpc", "response", response, "err", err)
 	return response, err
 }
 

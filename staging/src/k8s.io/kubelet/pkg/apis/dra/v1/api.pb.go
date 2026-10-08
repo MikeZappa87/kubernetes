@@ -495,6 +495,212 @@ func (x *Claim) GetName() string {
 	return ""
 }
 
+type NodeConfigurePodResourcesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The list of ResourceClaims that are to be configured for the pod.
+	Claims []*Claim `protobuf:"bytes,1,rep,name=claims,proto3" json:"claims,omitempty"`
+	// The sandbox in which the pod is running. Required.
+	Sandbox       *Sandbox `protobuf:"bytes,2,opt,name=sandbox,proto3" json:"sandbox,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeConfigurePodResourcesRequest) Reset() {
+	*x = NodeConfigurePodResourcesRequest{}
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeConfigurePodResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeConfigurePodResourcesRequest) ProtoMessage() {}
+
+func (x *NodeConfigurePodResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeConfigurePodResourcesRequest.ProtoReflect.Descriptor instead.
+func (*NodeConfigurePodResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NodeConfigurePodResourcesRequest) GetClaims() []*Claim {
+	if x != nil {
+		return x.Claims
+	}
+	return nil
+}
+
+func (x *NodeConfigurePodResourcesRequest) GetSandbox() *Sandbox {
+	if x != nil {
+		return x.Sandbox
+	}
+	return nil
+}
+
+type NodeConfigurePodResourcesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ResourceClaims for which configuration was done
+	// or attempted, with claim_uid as key.
+	//
+	// It is an error if some claim listed in NodeConfigurePodResourcesRequest
+	// does not get configured. NodeConfigurePodResources
+	// will be called again for those that are missing.
+	Claims        map[string]*NodeConfigurePodResourceResponse `protobuf:"bytes,1,rep,name=claims,proto3" json:"claims,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeConfigurePodResourcesResponse) Reset() {
+	*x = NodeConfigurePodResourcesResponse{}
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeConfigurePodResourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeConfigurePodResourcesResponse) ProtoMessage() {}
+
+func (x *NodeConfigurePodResourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeConfigurePodResourcesResponse.ProtoReflect.Descriptor instead.
+func (*NodeConfigurePodResourcesResponse) Descriptor() ([]byte, []int) {
+	return file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *NodeConfigurePodResourcesResponse) GetClaims() map[string]*NodeConfigurePodResourceResponse {
+	if x != nil {
+		return x.Claims
+	}
+	return nil
+}
+
+type NodeConfigurePodResourceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// These are the additional devices that kubelet must
+	// make available via the container runtime. A claim
+	// may have zero or more requests and each request
+	// may have zero or more devices.
+	Devices []*Device `protobuf:"bytes,1,rep,name=devices,proto3" json:"devices,omitempty"`
+	// If non-empty, configuring the ResourceClaim failed.
+	// Devices are ignored in that case.
+	Error         string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeConfigurePodResourceResponse) Reset() {
+	*x = NodeConfigurePodResourceResponse{}
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeConfigurePodResourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeConfigurePodResourceResponse) ProtoMessage() {}
+
+func (x *NodeConfigurePodResourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeConfigurePodResourceResponse.ProtoReflect.Descriptor instead.
+func (*NodeConfigurePodResourceResponse) Descriptor() ([]byte, []int) {
+	return file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *NodeConfigurePodResourceResponse) GetDevices() []*Device {
+	if x != nil {
+		return x.Devices
+	}
+	return nil
+}
+
+func (x *NodeConfigurePodResourceResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type Sandbox struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NetnsPath     string                 `protobuf:"bytes,1,opt,name=netns_path,json=netnsPath,proto3" json:"netns_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Sandbox) Reset() {
+	*x = Sandbox{}
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Sandbox) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Sandbox) ProtoMessage() {}
+
+func (x *Sandbox) ProtoReflect() protoreflect.Message {
+	mi := &file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Sandbox.ProtoReflect.Descriptor instead.
+func (*Sandbox) Descriptor() ([]byte, []int) {
+	return file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Sandbox) GetNetnsPath() string {
+	if x != nil {
+		return x.NetnsPath
+	}
+	return ""
+}
+
 var File_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto protoreflect.FileDescriptor
 
 const file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDesc = "" +
@@ -530,10 +736,25 @@ const file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDesc = "" +
 	"\x05Claim\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\tR\x03uid\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name2\xbd\x02\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\xa4\x01\n" +
+	" NodeConfigurePodResourcesRequest\x12=\n" +
+	"\x06claims\x18\x01 \x03(\v2%.k8s.io.kubelet.pkg.apis.dra.v1.ClaimR\x06claims\x12A\n" +
+	"\asandbox\x18\x02 \x01(\v2'.k8s.io.kubelet.pkg.apis.dra.v1.SandboxR\asandbox\"\x87\x02\n" +
+	"!NodeConfigurePodResourcesResponse\x12e\n" +
+	"\x06claims\x18\x01 \x03(\v2M.k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse.ClaimsEntryR\x06claims\x1a{\n" +
+	"\vClaimsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12V\n" +
+	"\x05value\x18\x02 \x01(\v2@.k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourceResponseR\x05value:\x028\x01\"z\n" +
+	" NodeConfigurePodResourceResponse\x12@\n" +
+	"\adevices\x18\x01 \x03(\v2&.k8s.io.kubelet.pkg.apis.dra.v1.DeviceR\adevices\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"(\n" +
+	"\aSandbox\x12\x1d\n" +
+	"\n" +
+	"netns_path\x18\x01 \x01(\tR\tnetnsPath2\xe2\x03\n" +
 	"\tDRAPlugin\x12\x93\x01\n" +
 	"\x14NodePrepareResources\x12;.k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest\x1a<.k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse\"\x00\x12\x99\x01\n" +
-	"\x16NodeUnprepareResources\x12=.k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest\x1a>.k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse\"\x00B Z\x1ek8s.io/kubelet/pkg/apis/dra/v1b\x06proto3"
+	"\x16NodeUnprepareResources\x12=.k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest\x1a>.k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse\"\x00\x12\xa2\x01\n" +
+	"\x19NodeConfigurePodResources\x12@.k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesRequest\x1aA.k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse\"\x00B Z\x1ek8s.io/kubelet/pkg/apis/dra/v1b\x06proto3"
 
 var (
 	file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescOnce sync.Once
@@ -547,36 +768,48 @@ func file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescGZIP() []b
 	return file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDescData
 }
 
-var file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_goTypes = []any{
-	(*NodePrepareResourcesRequest)(nil),    // 0: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest
-	(*NodePrepareResourcesResponse)(nil),   // 1: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse
-	(*NodePrepareResourceResponse)(nil),    // 2: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse
-	(*Device)(nil),                         // 3: k8s.io.kubelet.pkg.apis.dra.v1.Device
-	(*NodeUnprepareResourcesRequest)(nil),  // 4: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest
-	(*NodeUnprepareResourcesResponse)(nil), // 5: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse
-	(*NodeUnprepareResourceResponse)(nil),  // 6: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourceResponse
-	(*Claim)(nil),                          // 7: k8s.io.kubelet.pkg.apis.dra.v1.Claim
-	nil,                                    // 8: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry
-	nil,                                    // 9: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry
+	(*NodePrepareResourcesRequest)(nil),       // 0: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest
+	(*NodePrepareResourcesResponse)(nil),      // 1: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse
+	(*NodePrepareResourceResponse)(nil),       // 2: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse
+	(*Device)(nil),                            // 3: k8s.io.kubelet.pkg.apis.dra.v1.Device
+	(*NodeUnprepareResourcesRequest)(nil),     // 4: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest
+	(*NodeUnprepareResourcesResponse)(nil),    // 5: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse
+	(*NodeUnprepareResourceResponse)(nil),     // 6: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourceResponse
+	(*Claim)(nil),                             // 7: k8s.io.kubelet.pkg.apis.dra.v1.Claim
+	(*NodeConfigurePodResourcesRequest)(nil),  // 8: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesRequest
+	(*NodeConfigurePodResourcesResponse)(nil), // 9: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse
+	(*NodeConfigurePodResourceResponse)(nil),  // 10: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourceResponse
+	(*Sandbox)(nil),                           // 11: k8s.io.kubelet.pkg.apis.dra.v1.Sandbox
+	nil,                                       // 12: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry
+	nil,                                       // 13: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry
+	nil,                                       // 14: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse.ClaimsEntry
 }
 var file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_depIdxs = []int32{
-	7, // 0: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Claim
-	8, // 1: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry
-	3, // 2: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse.devices:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Device
-	7, // 3: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Claim
-	9, // 4: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry
-	2, // 5: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry.value:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse
-	6, // 6: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry.value:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourceResponse
-	0, // 7: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodePrepareResources:input_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest
-	4, // 8: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeUnprepareResources:input_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest
-	1, // 9: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodePrepareResources:output_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse
-	5, // 10: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeUnprepareResources:output_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse
-	9, // [9:11] is the sub-list for method output_type
-	7, // [7:9] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	7,  // 0: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Claim
+	12, // 1: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry
+	3,  // 2: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse.devices:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Device
+	7,  // 3: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Claim
+	13, // 4: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry
+	7,  // 5: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesRequest.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Claim
+	11, // 6: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesRequest.sandbox:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Sandbox
+	14, // 7: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse.claims:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse.ClaimsEntry
+	3,  // 8: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourceResponse.devices:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.Device
+	2,  // 9: k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse.ClaimsEntry.value:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourceResponse
+	6,  // 10: k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse.ClaimsEntry.value:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourceResponse
+	10, // 11: k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse.ClaimsEntry.value:type_name -> k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourceResponse
+	0,  // 12: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodePrepareResources:input_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesRequest
+	4,  // 13: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeUnprepareResources:input_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesRequest
+	8,  // 14: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeConfigurePodResources:input_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesRequest
+	1,  // 15: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodePrepareResources:output_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodePrepareResourcesResponse
+	5,  // 16: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeUnprepareResources:output_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeUnprepareResourcesResponse
+	9,  // 17: k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin.NodeConfigurePodResources:output_type -> k8s.io.kubelet.pkg.apis.dra.v1.NodeConfigurePodResourcesResponse
+	15, // [15:18] is the sub-list for method output_type
+	12, // [12:15] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_init() }
@@ -591,7 +824,7 @@ func file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDesc), len(file_staging_src_k8s_io_kubelet_pkg_apis_dra_v1_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

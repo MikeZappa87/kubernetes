@@ -46,6 +46,7 @@ import (
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	resourcehelper "k8s.io/component-helpers/resource"
 	internalapi "k8s.io/cri-api/pkg/apis"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	pluginwatcherapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
 	kubefeatures "k8s.io/kubernetes/pkg/features"
@@ -1116,6 +1117,10 @@ func containerMemoryFromBlock(blocks []memorymanagerstate.Block) []*podresources
 
 func (cm *containerManagerImpl) PrepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
 	return cm.draManager.PrepareResources(ctx, pod)
+}
+
+func (cm *containerManagerImpl) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
+	return cm.draManager.ConfigurePodResources(ctx, pod, sandbox)
 }
 
 func (cm *containerManagerImpl) UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error {

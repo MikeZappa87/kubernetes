@@ -21,6 +21,8 @@ import (
 	fmt "fmt"
 
 	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "k8s.io/kubelet/pkg/apis/dra/v1"
@@ -111,6 +113,10 @@ func (w V1Beta1ServerWrapper) NodeUnprepareResources(ctx context.Context, req *v
 	return &convertedResp, nil
 }
 
+func (V1Beta1ServerWrapper) NodeConfigurePodResources(context.Context, *v1.NodeConfigurePodResourcesRequest) (*v1.NodeConfigurePodResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "NodeConfigurePodResources is not available in the v1beta1 DRAPlugin service")
+}
+
 // V1ClientWrapper implements the [NodeClient] interface by wrapping a [v1.DRAPluginClient].
 type V1ClientWrapper struct {
 	v1.DRAPluginClient
@@ -187,4 +193,8 @@ func (w V1Beta1ClientWrapper) NodeUnprepareResources(ctx context.Context, req *v
 		return nil, fmt.Errorf("internal error converting NodeUnprepareResourcesResponse from v1beta1 to v1: %w", err)
 	}
 	return &convertedResp, nil
+}
+
+func (V1Beta1ClientWrapper) NodeConfigurePodResources(context.Context, *v1.NodeConfigurePodResourcesRequest, ...grpc.CallOption) (*v1.NodeConfigurePodResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "NodeConfigurePodResources is not available in the v1beta1 DRAPlugin service")
 }

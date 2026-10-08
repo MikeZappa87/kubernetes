@@ -40,6 +40,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	internalapi "k8s.io/cri-api/pkg/apis"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	pluginwatcherapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
 	"k8s.io/kubernetes/pkg/kubelet/cadvisor"
@@ -381,6 +382,10 @@ func (cm *containerManagerImpl) GetDynamicResources(logger klog.Logger, pod *v1.
 }
 
 func (cm *containerManagerImpl) PrepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
+	return nil
+}
+
+func (cm *containerManagerImpl) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
 	return nil
 }
 

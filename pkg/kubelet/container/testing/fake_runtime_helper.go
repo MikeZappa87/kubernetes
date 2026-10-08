@@ -26,6 +26,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	"k8s.io/kubernetes/pkg/features"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
@@ -112,6 +113,10 @@ func (f *FakeRuntimeHelper) GetOrCreateUserNamespaceMappings(logger klog.Logger,
 }
 
 func (f *FakeRuntimeHelper) PrepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
+	return nil
+}
+
+func (f *FakeRuntimeHelper) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
 	return nil
 }
 

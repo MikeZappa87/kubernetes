@@ -73,6 +73,15 @@ func (f *fakeGRPCServer) NodeUnprepareResources(ctx context.Context, in *drapbv1
 	return &drapbv1.NodeUnprepareResourcesResponse{}, nil
 }
 
+func (f *fakeGRPCServer) NodeConfigurePodResources(ctx context.Context, in *drapbv1.NodeConfigurePodResourcesRequest) (*drapbv1.NodeConfigurePodResourcesResponse, error) {
+	return &drapbv1.NodeConfigurePodResourcesResponse{Claims: map[string]*drapbv1.NodeConfigurePodResourceResponse{"claim-uid": {
+		Devices: []*drapbv1.Device{{
+			RequestNames: []string{"test-request"},
+			CdiDeviceIds: []string{"test-cdi-id"},
+		}},
+	}}}, nil
+}
+
 func (f *fakeGRPCServer) NodeWatchResources(in *drahealthv1.NodeWatchResourcesRequest, srv drahealthv1.DRAResourceHealth_NodeWatchResourcesServer) error {
 	resp := &drahealthv1.NodeWatchResourcesResponse{
 		Devices: []*drahealthv1.DeviceHealth{
@@ -399,6 +408,13 @@ func TestGRPCMethods(t *testing.T) {
 
 			_, err = plugin.NodeUnprepareResources(tCtx, &drapbv1.NodeUnprepareResourcesRequest{})
 			assertError(t, test.expectError, err)
+
+			_, err = plugin.NodeConfigurePodResources(tCtx, &drapbv1.NodeConfigurePodResourcesRequest{})
+			if test.chosenService == drapbv1.DRAPluginService {
+				assert.NoError(t, err)
+			} else {
+				assert.Equal(t, grpccodes.Unimplemented, grpcstatus.Code(err))
+			}
 		})
 	}
 }

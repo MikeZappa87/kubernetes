@@ -29,6 +29,8 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
@@ -249,6 +251,18 @@ type DRAPlugin interface {
 	WatchHealthStatus(ctx context.Context, reports chan<- DeviceHealthReport) error
 }
 
+// PodResourceConfigurer is an optional extension for drivers that support
+// configuring resources for each pod after claim preparation. Drivers which
+// do not implement it continue to support the existing DRA operations.
+type PodResourceConfigurer interface {
+	// ConfigurePodResources configures resources for the pod using the given
+	// allocated claims and the sandbox details returned by the runtime. The
+	// network namespace path may be empty when the runtime does not expose it.
+	// It must be safe to call again when kubelet retries pod startup. The helper
+	// has already retrieved and validated the claims.
+	ConfigurePodResources(ctx context.Context, claims []*resourceapi.ResourceClaim, sandbox *drapbv1.Sandbox) (result map[types.UID]ConfigureResult, err error)
+}
+
 // ErrRecoverable distinguishes recoverable errors from those errors which are fatal
 // and should cause the process to exit. Use with:
 //
@@ -276,6 +290,15 @@ type PrepareResult struct {
 	// by the kubelet.
 	//
 	// The empty slice is also valid.
+	Devices []Device
+}
+
+// ConfigureResult contains the result of configuring one ResourceClaim for a pod.
+type ConfigureResult struct {
+	// Err, if non-nil, describes a problem configuring the claim. Devices are
+	// ignored in that case and kubelet retries the operation.
+	Err error
+	// Devices contains device information returned by the driver.
 	Devices []Device
 }
 
@@ -1410,6 +1433,52 @@ func (d *nodePluginImplementation) NodePrepareResources(ctx context.Context, req
 			devices = append(devices, device)
 		}
 		resp.Claims[string(uid)] = &drapbv1.NodePrepareResourceResponse{
+			Error:   errorString(claimResult.Err),
+			Devices: devices,
+		}
+	}
+	return resp, nil
+}
+
+// NodeConfigurePodResources implements [drapbv1.NodeConfigurePodResources].
+func (d *nodePluginImplementation) NodeConfigurePodResources(ctx context.Context, req *drapbv1.NodeConfigurePodResourcesRequest) (*drapbv1.NodeConfigurePodResourcesResponse, error) {
+	if req.GetSandbox() == nil {
+		return nil, status.Error(codes.InvalidArgument, "sandbox is required")
+	}
+	claims, err := d.getResourceClaims(ctx, req.Claims)
+	if err != nil {
+		return nil, fmt.Errorf("get resource claims: %w", err)
+	}
+
+	configurer, ok := d.plugin.(PodResourceConfigurer)
+	if !ok {
+		return nil, status.Error(codes.Unimplemented, "driver does not implement PodResourceConfigurer")
+	}
+
+	unlock, err := d.serializeGRPCIfEnabled()
+	if err != nil {
+		return nil, fmt.Errorf("serialize gRPC: %w", err)
+	}
+	defer unlock()
+
+	result, err := configurer.ConfigurePodResources(ctx, claims, req.GetSandbox())
+	if err != nil {
+		return nil, fmt.Errorf("configure pod resources: %w", err)
+	}
+
+	resp := &drapbv1.NodeConfigurePodResourcesResponse{Claims: map[string]*drapbv1.NodeConfigurePodResourceResponse{}}
+	for uid, claimResult := range result {
+		devices := make([]*drapbv1.Device, 0, len(claimResult.Devices))
+		for _, device := range claimResult.Devices {
+			devices = append(devices, &drapbv1.Device{
+				RequestNames: device.Requests,
+				PoolName:     device.PoolName,
+				DeviceName:   device.DeviceName,
+				CdiDeviceIds: device.CDIDeviceIDs,
+				ShareId:      (*string)(device.ShareID),
+			})
+		}
+		resp.Claims[string(uid)] = &drapbv1.NodeConfigurePodResourceResponse{
 			Error:   errorString(claimResult.Err),
 			Devices: devices,
 		}

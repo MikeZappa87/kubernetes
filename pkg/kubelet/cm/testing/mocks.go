@@ -24,11 +24,12 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/server/healthz"
-	"k8s.io/cri-api/pkg/apis"
+	cri "k8s.io/cri-api/pkg/apis"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	v10 "k8s.io/kubelet/pkg/apis/podresources/v1"
 	"k8s.io/kubernetes/pkg/kubelet/cm"
 	"k8s.io/kubernetes/pkg/kubelet/cm/resourceupdates"
@@ -1524,6 +1525,19 @@ func (_c *MockContainerManager_PrepareDynamicResources_Call) Return(err error) *
 func (_c *MockContainerManager_PrepareDynamicResources_Call) RunAndReturn(run func(context1 context.Context, pod *v1.Pod) error) *MockContainerManager_PrepareDynamicResources_Call {
 	_c.Call.Return(run)
 	return _c
+}
+
+// NodeConfigurePodResources provides a mock function for the type MockContainerManager
+func (_mock *MockContainerManager) NodeConfigurePodResources(context1 context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
+	ret := _mock.Called(context1, pod, sandbox)
+	if len(ret) == 0 {
+		panic("no return value specified for NodeConfigurePodResources")
+	}
+
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *v1.Pod, *drapbv1.Sandbox) error); ok {
+		return returnFunc(context1, pod, sandbox)
+	}
+	return ret.Error(0)
 }
 
 // ShouldResetExtendedResourceCapacity provides a mock function for the type MockContainerManager

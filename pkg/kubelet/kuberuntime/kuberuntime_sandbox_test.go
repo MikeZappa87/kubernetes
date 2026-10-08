@@ -36,6 +36,52 @@ import (
 
 const testPodLogsDirectory = "/var/log/pods"
 
+func TestPodSandboxNetNSPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		info    map[string]string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "direct runtime info",
+			info: map[string]string{"netns": "/run/netns/pod"},
+			want: "/run/netns/pod",
+		},
+		{
+			name: "containerd versioned metadata",
+			info: map[string]string{"info": `{"sandboxMetadata":{"Version":"v1","Metadata":{"NetNSPath":"/run/containerd/netns/pod"}}}`},
+			want: "/run/containerd/netns/pod",
+		},
+		{
+			name: "OCI runtime spec namespace",
+			info: map[string]string{"info": `{"runtimeSpec":{"linux":{"namespaces":[{"type":"pid","path":"/proc/1/ns/pid"},{"type":"network","path":"/proc/1/ns/net"}]}}}`},
+			want: "/proc/1/ns/net",
+		},
+		{
+			name: "missing verbose info",
+			info: map[string]string{},
+		},
+		{
+			name:    "invalid verbose JSON",
+			info:    map[string]string{"info": "not-json"},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := podSandboxNetNSPath(tc.info)
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestGeneratePodSandboxConfig(t *testing.T) {
 	tCtx := ktesting.Init(t)
 	_, _, m, err := createTestRuntimeManager(tCtx)
