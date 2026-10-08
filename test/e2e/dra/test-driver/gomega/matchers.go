@@ -89,6 +89,16 @@ var NodeUnprepareResourcesSucceeded = gcustom.MakeMatcher(func(actualCalls []tes
 	return false, nil
 }).WithMessage("contain successful NodeUnprepareResources call")
 
+// NodeConfigurePodResourcesSucceeded checks that NodeConfigurePodResources was called successfully.
+var NodeConfigurePodResourcesSucceeded = gcustom.MakeMatcher(func(actualCalls []testdriver.GRPCCall) (bool, error) {
+	for _, call := range actualCalls {
+		if strings.HasSuffix(call.FullMethod, "/NodeConfigurePodResources") && call.Response != nil && call.Err == nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}).WithMessage("contain successful NodeConfigurePodResources call")
+
 // NodeUnprepareResourcesInProgress checks that a NodeUnprepareResources call has been received and has not returned yet.
 var NodeUnprepareResourcesInProgress = gcustom.MakeMatcher(func(actualCalls []testdriver.GRPCCall) (bool, error) {
 	for _, call := range actualCalls {

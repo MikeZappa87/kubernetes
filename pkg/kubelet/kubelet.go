@@ -83,6 +83,7 @@ import (
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	remote "k8s.io/cri-client/pkg"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	pluginwatcherapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
@@ -3552,6 +3553,12 @@ func isSyncPodWorthy(event *pleg.PodLifecycleEvent) bool {
 // This method implements the RuntimeHelper interface
 func (kl *Kubelet) PrepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
 	return kl.containerManager.PrepareDynamicResources(ctx, pod)
+}
+
+// NodeConfigurePodResources calls the container manager NodeConfigurePodResources API.
+// This method implements the RuntimeHelper interface.
+func (kl *Kubelet) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
+	return kl.containerManager.NodeConfigurePodResources(ctx, pod, sandbox)
 }
 
 // UnprepareDynamicResources calls the container Manager UnprepareDynamicResources API

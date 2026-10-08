@@ -43,6 +43,7 @@ import (
 	"k8s.io/dynamic-resource-allocation/resourceclaim"
 	"k8s.io/dynamic-resource-allocation/resourceslice"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	cdi "tags.cncf.io/container-device-interface/specs-go"
 )
 
@@ -483,6 +484,14 @@ func (ex *ExamplePlugin) PrepareResourceClaims(ctx context.Context, claims []*re
 			claimResult.Devices = devices
 		}
 		result[claim.UID] = claimResult
+	}
+	return result, nil
+}
+
+func (ex *ExamplePlugin) ConfigurePodResources(_ context.Context, claims []*resourceapi.ResourceClaim, _ *drapbv1.Sandbox) (map[types.UID]kubeletplugin.ConfigureResult, error) {
+	result := make(map[types.UID]kubeletplugin.ConfigureResult, len(claims))
+	for _, claim := range claims {
+		result[claim.UID] = kubeletplugin.ConfigureResult{}
 	}
 	return result, nil
 }

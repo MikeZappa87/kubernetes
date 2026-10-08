@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/server/healthz"
 	internalapi "k8s.io/cri-api/pkg/apis"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
 	"k8s.io/kubernetes/pkg/kubelet/cm/memorymanager"
@@ -286,6 +287,13 @@ func (cm *FakeContainerManager) GetNodeAllocatableAbsolute() v1.ResourceList {
 }
 
 func (cm *FakeContainerManager) PrepareDynamicResources(_ context.Context, _ *v1.Pod) error {
+	return nil
+}
+
+func (cm *FakeContainerManager) NodeConfigurePodResources(_ context.Context, _ *v1.Pod, _ *drapbv1.Sandbox) error {
+	cm.Lock()
+	defer cm.Unlock()
+	cm.CalledFunctions = append(cm.CalledFunctions, "NodeConfigurePodResources")
 	return nil
 }
 

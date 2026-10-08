@@ -48,6 +48,7 @@ import (
 	crierror "k8s.io/cri-api/pkg/errors"
 	remote "k8s.io/cri-client/pkg"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"k8s.io/kubernetes/pkg/credentialprovider"
@@ -1745,7 +1746,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		}
 		logger.V(4).Info("Created PodSandbox for pod", "podSandboxID", podSandboxID, "pod", klog.KObj(pod))
 
-		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, false)
+		resp, err := m.runtimeService.PodSandboxStatus(ctx, podSandboxID, true)
 		if err != nil {
 			ref, referr := ref.GetReference(legacyscheme.Scheme, pod)
 			if referr != nil {
@@ -1758,6 +1759,17 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		}
 		if resp.GetStatus() == nil {
 			result.Fail(errors.New("pod sandbox status is nil"))
+			return
+		}
+
+		netnsPath, netnsErr := podSandboxNetNSPath(resp.GetInfo())
+		if netnsErr != nil {
+			logger.V(4).Info("Could not extract network namespace path from verbose PodSandboxStatus info", "err", netnsErr)
+		}
+		sandbox := &drapbv1.Sandbox{NetnsPath: netnsPath}
+		if err := m.runtimeHelper.NodeConfigurePodResources(ctx, pod, sandbox); err != nil {
+			logger.Error(err, "Failed to configure pod resources", "pod", klog.KObj(pod))
+			result.Fail(err)
 			return
 		}
 

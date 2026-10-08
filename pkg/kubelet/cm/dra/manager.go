@@ -248,6 +248,66 @@ func (m *Manager) PrepareResources(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
+// ConfigurePodResources asks each DRA driver used by the pod to perform its
+// optional per-pod configuration step. This is a POC hook; returned device
+// details are currently not added to the existing per-container DRA cache.
+func (m *Manager) ConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapb.Sandbox) error {
+	logger := klog.FromContext(ctx).WithName("dra-manager")
+	logger = klog.LoggerWithValues(logger, "pod", klog.KObj(pod))
+	batches := make(map[string][]*drapb.Claim)
+
+	err := m.cache.withRLock(func() error {
+		for _, claimInfo := range m.cache.claimInfo {
+			if !claimInfo.hasPodReference(pod.UID) {
+				continue
+			}
+			if !claimInfo.isPrepared() {
+				return fmt.Errorf("ResourceClaim %s is not prepared", claimInfo.ClaimName)
+			}
+			claim := &drapb.Claim{
+				Namespace: claimInfo.Namespace,
+				Uid:       string(claimInfo.ClaimUID),
+				Name:      claimInfo.ClaimName,
+			}
+			for driverName := range claimInfo.DriverState {
+				batches[driverName] = append(batches[driverName], claim)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for driverName, claims := range batches {
+		plugin, err := m.draPlugins.GetPlugin(driverName)
+		if err != nil {
+			return err
+		}
+		response, err := plugin.NodeConfigurePodResources(ctx, &drapb.NodeConfigurePodResourcesRequest{Claims: claims, Sandbox: sandbox})
+		if status.Code(err) == codes.Unimplemented {
+			logger.V(4).Info("DRA driver does not support NodeConfigurePodResources", "driverName", driverName)
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("NodeConfigurePodResources: %w", err)
+		}
+		for claimUID, result := range response.GetClaims() {
+			claim := lookupClaimRequest(claims, claimUID)
+			if claim == nil {
+				return fmt.Errorf("NodeConfigurePodResources returned result for unknown claim UID %s", claimUID)
+			}
+			if result.GetError() != "" {
+				return fmt.Errorf("NodeConfigurePodResources failed for ResourceClaim %s: %s", claim.Name, result.GetError())
+			}
+		}
+		if unfinished := len(claims) - len(response.GetClaims()); unfinished != 0 {
+			return fmt.Errorf("NodeConfigurePodResources skipped %d ResourceClaims", unfinished)
+		}
+	}
+	return nil
+}
+
 func (m *Manager) prepareResources(ctx context.Context, pod *v1.Pod) error {
 	var err error
 	logger := klog.FromContext(ctx).WithName("dra-manager")

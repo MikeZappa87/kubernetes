@@ -18,6 +18,7 @@ package kuberuntime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"runtime"
@@ -37,6 +38,51 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
 	netutils "k8s.io/utils/net"
 )
+
+// podSandboxNetNSPath extracts the network namespace from the verbose CRI
+// sandbox info. Containerd exposes it in its JSON sandbox metadata; other
+// runtimes may provide the OCI network namespace path instead.
+func podSandboxNetNSPath(info map[string]string) (string, error) {
+	if netnsPath := info["netns"]; netnsPath != "" {
+		return netnsPath, nil
+	}
+
+	rawInfo := info["info"]
+	if rawInfo == "" {
+		return "", nil
+	}
+	var sandboxInfo struct {
+		SandboxMetadata struct {
+			NetNSPath string
+			Metadata  struct {
+				NetNSPath string
+			}
+		} `json:"sandboxMetadata"`
+		RuntimeSpec struct {
+			Linux struct {
+				Namespaces []struct {
+					Type string `json:"type"`
+					Path string `json:"path"`
+				} `json:"namespaces"`
+			} `json:"linux"`
+		} `json:"runtimeSpec"`
+	}
+	if err := json.Unmarshal([]byte(rawInfo), &sandboxInfo); err != nil {
+		return "", fmt.Errorf("decode verbose sandbox info: %w", err)
+	}
+	if netnsPath := sandboxInfo.SandboxMetadata.Metadata.NetNSPath; netnsPath != "" {
+		return netnsPath, nil
+	}
+	if netnsPath := sandboxInfo.SandboxMetadata.NetNSPath; netnsPath != "" {
+		return netnsPath, nil
+	}
+	for _, namespace := range sandboxInfo.RuntimeSpec.Linux.Namespaces {
+		if namespace.Type == "network" && namespace.Path != "" {
+			return namespace.Path, nil
+		}
+	}
+	return "", nil
+}
 
 // createPodSandbox creates a pod sandbox and returns (podSandBoxID, message, error).
 func (m *kubeGenericRuntimeManager) createPodSandbox(ctx context.Context, pod *v1.Pod, attempt uint32) (string, string, error) {

@@ -33,6 +33,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"k8s.io/kubernetes/pkg/features"
@@ -70,6 +71,8 @@ type RuntimeHelper interface {
 
 	// UnprepareDynamicResources unprepares resources for a a pod.
 	UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error
+
+	NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error
 
 	// RequestPodReinspect flags a pod to be inspected on the next relist.
 	RequestPodReinspect(types.UID)

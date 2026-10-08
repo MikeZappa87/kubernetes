@@ -33,6 +33,11 @@ service DRAPlugin {
   // The same error handling rules apply,
   rpc NodeUnprepareResources (NodeUnprepareResourcesRequest)
     returns (NodeUnprepareResourcesResponse) {}
+
+    // NodeConfigurePodResources configures the resources for a pod on the node.
+  // The same error handling rules apply,
+  rpc NodeConfigurePodResources (NodeConfigurePodResourcesRequest)
+    returns (NodeConfigurePodResourcesResponse) {}
 }
 
 message NodePrepareResourcesRequest {
@@ -109,4 +114,36 @@ message Claim {
     // The name of the Resource claim (ResourceClaim.meta.Name)
     // This field is REQUIRED.
     string name = 3;
+}
+
+message NodeConfigurePodResourcesRequest {
+    // The list of ResourceClaims that are to be configured for the pod.
+    repeated Claim claims = 1;
+    // The sandbox in which the pod is running. Required.
+    Sandbox sandbox = 2;
+}
+
+message NodeConfigurePodResourcesResponse {
+    // The ResourceClaims for which configuration was done
+    // or attempted, with claim_uid as key.
+    //
+    // It is an error if some claim listed in NodeConfigurePodResourcesRequest
+    // does not get configured. NodeConfigurePodResources
+    // will be called again for those that are missing.
+    map<string, NodeConfigurePodResourceResponse> claims = 1;
+}
+
+message NodeConfigurePodResourceResponse {
+    // These are the additional devices that kubelet must
+    // make available via the container runtime. A claim
+    // may have zero or more requests and each request
+    // may have zero or more devices.
+    repeated Device devices = 1;
+    // If non-empty, configuring the ResourceClaim failed.
+    // Devices are ignored in that case.
+    string error = 2;
+}
+
+message Sandbox {
+    string netns_path = 1;
 }

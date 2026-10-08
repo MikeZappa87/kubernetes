@@ -32,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/server/healthz"
 	internalapi "k8s.io/cri-api/pkg/apis"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
 	"k8s.io/kubernetes/pkg/kubelet/apis/podresources"
@@ -144,6 +145,9 @@ type ContainerManager interface {
 
 	// UnprepareDynamicResources unprepares dynamic pod resources
 	UnprepareDynamicResources(context.Context, *v1.Pod) error
+
+	// NodeConfigurePodResources performs optional per-pod DRA configuration.
+	NodeConfigurePodResources(context.Context, *v1.Pod, *drapbv1.Sandbox) error
 
 	// PodMightNeedToUnprepareResources returns true if the pod with the given UID
 	// might need to unprepare resources.
