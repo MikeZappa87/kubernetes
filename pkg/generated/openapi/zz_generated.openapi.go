@@ -29069,6 +29069,14 @@ func schema_k8sio_api_core_v1_PodSpec(ref common.ReferenceCallback) common.OpenA
 							},
 						},
 					},
+					"defaultNetwork": {
+						SchemaProps: spec.SchemaProps{
+							Description: "defaultNetwork selects the pod's default network. Pod preserves historical behavior, Host is equivalent to hostNetwork: true, and None creates an isolated network namespace with only loopback configured. HostNetwork and this field are kept in sync. None defaults dnsPolicy to None and enableServiceLinks to false; those defaults may be overridden. Network-dependent features such as hostPorts and network probes are forbidden with None. This field is immutable.\n\nPossible enum values:\n - `\"Host\"` runs the pod in the host network namespace.\n - `\"None\"` creates an isolated network namespace with only loopback configured and no default pod network attachment.\n - `\"Pod\"` preserves the historical behavior: the pod gets its own network namespace attached to the default pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+							Enum:        []interface{}{"Host", "None", "Pod"},
+						},
+					},
 				},
 				Required: []string{"containers"},
 			},

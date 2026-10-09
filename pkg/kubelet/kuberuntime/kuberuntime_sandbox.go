@@ -152,6 +152,9 @@ func (m *kubeGenericRuntimeManager) generatePodSandboxConfig(ctx context.Context
 		}
 		podSandboxConfig.Windows = wc
 	}
+	if !kubecontainer.IsHostNetworkPod(pod) && pod.Spec.DefaultNetwork != nil && *pod.Spec.DefaultNetwork == v1.PodDefaultNetworkNone {
+		podSandboxConfig.DefaultNetwork = runtimeapi.PodSandboxDefaultNetwork_DEFAULT_NETWORK_NONE
+	}
 
 	// Update config to include overhead, sandbox level resources
 	if err := m.applySandboxResources(ctx, pod, podSandboxConfig); err != nil {

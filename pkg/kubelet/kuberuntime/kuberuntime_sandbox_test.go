@@ -26,8 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	featuregatetesting "k8s.io/component-base/featuregate/testing"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/ktesting"
+	"k8s.io/kubernetes/pkg/features"
 	containertest "k8s.io/kubernetes/pkg/kubelet/container/testing"
 	"k8s.io/kubernetes/pkg/kubelet/runtimeclass"
 	rctest "k8s.io/kubernetes/pkg/kubelet/runtimeclass/testing"
@@ -35,6 +38,28 @@ import (
 )
 
 const testPodLogsDirectory = "/var/log/pods"
+
+func TestGeneratePodSandboxConfigDefaultNetwork(t *testing.T) {
+	tCtx := ktesting.Init(t)
+	_, _, m, err := createTestRuntimeManager(tCtx)
+	require.NoError(t, err)
+	featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.PodDefaultNetwork, true)
+
+	mode := v1.PodDefaultNetworkNone
+	pod := newTestPod()
+	pod.Spec.DefaultNetwork = &mode
+	config, err := m.generatePodSandboxConfig(tCtx, pod, 1)
+	require.NoError(t, err)
+	assert.Equal(t, runtimeapi.PodSandboxDefaultNetwork_DEFAULT_NETWORK_NONE, config.DefaultNetwork)
+
+	// The CRI field has no Host value and must be ignored for host-network pods.
+	mode = v1.PodDefaultNetworkHost
+	pod.Spec.HostNetwork = true
+	pod.Spec.DefaultNetwork = &mode
+	config, err = m.generatePodSandboxConfig(tCtx, pod, 1)
+	require.NoError(t, err)
+	assert.Equal(t, runtimeapi.PodSandboxDefaultNetwork_DEFAULT_NETWORK_POD, config.DefaultNetwork)
+}
 
 func TestGeneratePodSandboxConfig(t *testing.T) {
 	tCtx := ktesting.Init(t)

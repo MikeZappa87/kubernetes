@@ -299,6 +299,14 @@ type PodSpecApplyConfiguration struct {
 	// Responders are not supported when the pod is part of a PodGroup (.spec.schedulingGroup is set).
 	// This field can only be set on creation and is immutable afterwards.
 	EvictionResponders []EvictionResponderApplyConfiguration `json:"evictionResponders,omitempty"`
+	// defaultNetwork selects the pod's default network. Pod preserves historical
+	// behavior, Host is equivalent to hostNetwork: true, and None creates an
+	// isolated network namespace with only loopback configured.
+	// HostNetwork and this field are kept in sync. None defaults dnsPolicy to
+	// None and enableServiceLinks to false; those defaults may be overridden.
+	// Network-dependent features such as hostPorts and network probes are
+	// forbidden with None. This field is immutable.
+	DefaultNetwork *corev1.PodDefaultNetwork `json:"defaultNetwork,omitempty"`
 }
 
 // PodSpecApplyConfiguration constructs a declarative configuration of the PodSpec type for use with
@@ -714,5 +722,13 @@ func (b *PodSpecApplyConfiguration) WithEvictionResponders(values ...*EvictionRe
 		}
 		b.EvictionResponders = append(b.EvictionResponders, *values[i])
 	}
+	return b
+}
+
+// WithDefaultNetwork sets the DefaultNetwork field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the DefaultNetwork field is set to the value of the last call.
+func (b *PodSpecApplyConfiguration) WithDefaultNetwork(value corev1.PodDefaultNetwork) *PodSpecApplyConfiguration {
+	b.DefaultNetwork = &value
 	return b
 }

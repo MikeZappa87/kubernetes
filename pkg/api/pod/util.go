@@ -774,6 +774,7 @@ func dropDisabledFields(
 	dropDisabledSchedulingGroup(podSpec, oldPodSpec)
 	dropDisabledGRPCContainerProbeTLS(podSpec, oldPodSpec)
 	dropDisabledEvictionResponders(podSpec, oldPodSpec)
+	dropDisabledPodDefaultNetwork(podSpec, oldPodSpec)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.InPlacePodVerticalScaling) && !inPlacePodVerticalScalingInUse(oldPodSpec) {
 		// Drop ResizePolicy fields. Don't drop updates to Resources field as template.spec.resources
@@ -848,6 +849,16 @@ func dropDisabledFields(
 	dropContainerStopSignals(podSpec, oldPodSpec)
 	dropHTTPProbeProtocol(podSpec, oldPodSpec)
 	DropInitContainerAnnotations(podAnnotations)
+}
+
+func dropDisabledPodDefaultNetwork(podSpec, oldPodSpec *api.PodSpec) {
+	if !utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) && !podDefaultNetworkInUse(oldPodSpec) {
+		podSpec.DefaultNetwork = nil
+	}
+}
+
+func podDefaultNetworkInUse(podSpec *api.PodSpec) bool {
+	return podSpec != nil && podSpec.DefaultNetwork != nil
 }
 
 // setHostnameOverrideInUse returns true if any pod's spec defines HostnameOverride field.
