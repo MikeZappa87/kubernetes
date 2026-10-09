@@ -162,6 +162,19 @@ func SetDefaults_Service(obj *v1.Service) {
 
 }
 func SetDefaults_Pod(obj *v1.Pod) {
+	if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) {
+		defaultPodDefaultNetwork(&obj.Spec)
+		if obj.Spec.DefaultNetwork == nil {
+			if obj.Spec.HostNetwork {
+				obj.Spec.DefaultNetwork = ptr.To(v1.PodDefaultNetworkHost)
+			} else {
+				obj.Spec.DefaultNetwork = ptr.To(v1.PodDefaultNetworkPod)
+			}
+		}
+		if obj.Spec.DNSPolicy == "" && obj.Spec.DefaultNetwork != nil && *obj.Spec.DefaultNetwork == v1.PodDefaultNetworkNone {
+			obj.Spec.DNSPolicy = v1.DNSNone
+		}
+	}
 	// Enforced on Pod but not on PodSpec. For historical reasons, PodTemplate is not defaulted this way.
 	if obj.Spec.TerminationGracePeriodSeconds != nil && *obj.Spec.TerminationGracePeriodSeconds < 0 {
 		obj.Spec.TerminationGracePeriodSeconds = ptr.To[int64](1)
@@ -208,6 +221,10 @@ func SetDefaults_Pod(obj *v1.Pod) {
 
 	if obj.Spec.EnableServiceLinks == nil {
 		enableServiceLinks := v1.DefaultEnableServiceLinks
+		if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) &&
+			obj.Spec.DefaultNetwork != nil && *obj.Spec.DefaultNetwork == v1.PodDefaultNetworkNone {
+			enableServiceLinks = false
+		}
 		obj.Spec.EnableServiceLinks = &enableServiceLinks
 	}
 
@@ -254,8 +271,24 @@ func SetDefaults_PodSpec(obj *v1.PodSpec) {
 		obj.ServiceAccountName = obj.DeprecatedServiceAccount
 	}
 	obj.DeprecatedServiceAccount = obj.ServiceAccountName
+	if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) {
+		defaultPodDefaultNetwork(obj)
+	}
 	if obj.DNSPolicy == "" {
-		obj.DNSPolicy = v1.DNSClusterFirst
+		if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) &&
+			obj.DefaultNetwork != nil && *obj.DefaultNetwork == v1.PodDefaultNetworkNone {
+			obj.DNSPolicy = v1.DNSNone
+		} else {
+			obj.DNSPolicy = v1.DNSClusterFirst
+		}
+	}
+	if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) &&
+		obj.DefaultNetwork != nil && *obj.DefaultNetwork == v1.PodDefaultNetworkNone && obj.EnableServiceLinks == nil {
+		obj.EnableServiceLinks = ptr.To(false)
+	}
+	if utilfeature.DefaultFeatureGate.Enabled(features.PodDefaultNetwork) &&
+		obj.DefaultNetwork != nil && *obj.DefaultNetwork == v1.PodDefaultNetworkNone && obj.EnableServiceLinks == nil {
+		obj.EnableServiceLinks = ptr.To(false)
 	}
 	if obj.RestartPolicy == "" {
 		obj.RestartPolicy = v1.RestartPolicyAlways
@@ -270,6 +303,20 @@ func SetDefaults_PodSpec(obj *v1.PodSpec) {
 	}
 	if obj.SchedulerName == "" {
 		obj.SchedulerName = v1.DefaultSchedulerName
+	}
+}
+
+func defaultPodDefaultNetwork(spec *v1.PodSpec) {
+	if spec.DefaultNetwork == nil {
+		return
+	}
+	switch {
+	case *spec.DefaultNetwork == v1.PodDefaultNetworkHost:
+		spec.HostNetwork = true
+	case *spec.DefaultNetwork == v1.PodDefaultNetworkPod && spec.HostNetwork:
+		// Preserve hostNetwork semantics for older clients that patch only
+		// hostNetwork on an object already defaulted with DefaultNetwork=Pod.
+		spec.DefaultNetwork = ptr.To(v1.PodDefaultNetworkHost)
 	}
 }
 func SetDefaults_Probe(obj *v1.Probe) {

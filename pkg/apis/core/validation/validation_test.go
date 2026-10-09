@@ -60,6 +60,83 @@ const (
 	noUserNamespace                   = false
 )
 
+func TestValidatePodDefaultNetwork(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		mode       core.PodDefaultNetwork
+		hostNet    bool
+		container  core.Container
+		wantErrors []string
+	}{
+		{
+			name: "isolated pod without network-dependent fields",
+			mode: core.PodDefaultNetworkNone,
+			container: core.Container{
+				Name:                     "test",
+				Image:                    "test-image",
+				ImagePullPolicy:          core.PullIfNotPresent,
+				TerminationMessagePolicy: core.TerminationMessageReadFile,
+			},
+		},
+		{
+			name:    "none conflicts with host network",
+			mode:    core.PodDefaultNetworkNone,
+			hostNet: true,
+			wantErrors: []string{
+				`must not be "None" when hostNetwork is true`,
+			},
+		},
+		{
+			name: "host port is forbidden",
+			mode: core.PodDefaultNetworkNone,
+			container: core.Container{
+				Name:  "test",
+				Image: "test-image",
+				Ports: []core.ContainerPort{{ContainerPort: 80, HostPort: 8080}},
+			},
+			wantErrors: []string{`may not be set when defaultNetwork is "None"`},
+		},
+		{
+			name: "network probe is forbidden",
+			mode: core.PodDefaultNetworkNone,
+			container: core.Container{
+				Name:  "test",
+				Image: "test-image",
+				LivenessProbe: &core.Probe{ProbeHandler: core.ProbeHandler{
+					HTTPGet: &core.HTTPGetAction{Path: "/health", Port: intstr.FromInt32(80)},
+				}},
+			},
+			wantErrors: []string{`may not be set when defaultNetwork is "None"`},
+		},
+		{
+			name:       "host mode requires hostNetwork",
+			mode:       core.PodDefaultNetworkHost,
+			wantErrors: []string{`hostNetwork must be true when defaultNetwork is "Host"`},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mode := tc.mode
+			spec := &core.PodSpec{
+				TerminationGracePeriodSeconds: ptr.To[int64](30),
+				DefaultNetwork:                &mode,
+				DNSPolicy:                     core.DNSNone,
+				HostNetwork:                   tc.hostNet,
+				RestartPolicy:                 core.RestartPolicyAlways,
+				Containers:                    []core.Container{tc.container},
+			}
+			errs := ValidatePodSpec(spec, nil, field.NewPath("spec"), PodValidationOptions{})
+			for _, want := range tc.wantErrors {
+				if !strings.Contains(fmt.Sprint(errs), want) {
+					t.Errorf("expected validation error containing %q, got %v", want, errs)
+				}
+			}
+			if len(tc.wantErrors) == 0 && len(errs) != 0 {
+				t.Errorf("unexpected validation errors: %v", errs)
+			}
+		})
+	}
+}
+
 var (
 	containerRestartPolicyAlways    = core.ContainerRestartPolicyAlways
 	containerRestartPolicyOnFailure = core.ContainerRestartPolicyOnFailure

@@ -4646,6 +4646,31 @@ func TestDropHostnameOverride(t *testing.T) {
 	}
 }
 
+func TestDropDisabledPodDefaultNetwork(t *testing.T) {
+	none := api.PodDefaultNetworkNone
+	for _, tc := range []struct {
+		name string
+		old  *api.Pod
+		want *api.PodDefaultNetwork
+	}{
+		{name: "new object drops field"},
+		{
+			name: "stored field is preserved",
+			old:  &api.Pod{Spec: api.PodSpec{DefaultNetwork: &none}},
+			want: &none,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.PodDefaultNetwork, false)
+			pod := &api.Pod{Spec: api.PodSpec{DefaultNetwork: &none}}
+			DropDisabledPodFields(pod, tc.old)
+			if diff := cmp.Diff(tc.want, pod.Spec.DefaultNetwork); diff != "" {
+				t.Errorf("DefaultNetwork mismatch (-want,+got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestDropEmptyDirVolumeMode(t *testing.T) {
 	mode := int32(0o755)
 
