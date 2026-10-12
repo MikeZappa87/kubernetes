@@ -77,15 +77,16 @@ var (
 type fakeDRADriverGRPCServer struct {
 	drapb.UnimplementedDRAPluginServer
 	drahealthv1.UnimplementedDRAResourceHealthServer
-	driverName                 string
-	timeout                    *time.Duration
-	prepareResourceCalls       atomic.Uint32
-	unprepareResourceCalls     atomic.Uint32
-	watchResourcesCalls        atomic.Uint32
-	prepareResourcesResponse   *drapb.NodePrepareResourcesResponse
-	unprepareResourcesResponse *drapb.NodeUnprepareResourcesResponse
-	watchResourcesResponses    chan *drahealthv1.NodeWatchResourcesResponse
-	watchResourcesError        error
+	driverName                  string
+	timeout                     *time.Duration
+	prepareResourceCalls        atomic.Uint32
+	unprepareResourceCalls      atomic.Uint32
+	unconfigurePodResourceCalls atomic.Uint32
+	watchResourcesCalls         atomic.Uint32
+	prepareResourcesResponse    *drapb.NodePrepareResourcesResponse
+	unprepareResourcesResponse  *drapb.NodeUnprepareResourcesResponse
+	watchResourcesResponses     chan *drahealthv1.NodeWatchResourcesResponse
+	watchResourcesError         error
 }
 
 var gatherWithoutDurations = metricstestutil.GathererFunc(func() ([]*metricstestutil.MetricFamily, error) {
@@ -148,6 +149,15 @@ func (s *fakeDRADriverGRPCServer) NodeUnprepareResources(ctx context.Context, re
 	}
 
 	return s.unprepareResourcesResponse, nil
+}
+
+func (s *fakeDRADriverGRPCServer) NodeUnconfigurePodResources(ctx context.Context, req *drapb.NodeUnconfigurePodResourcesRequest) (*drapb.NodeUnconfigurePodResourcesResponse, error) {
+	s.unconfigurePodResourceCalls.Add(1)
+	claims := make(map[string]*drapb.NodeUnconfigurePodResourceResponse, len(req.GetClaims()))
+	for _, claim := range req.GetClaims() {
+		claims[claim.GetUid()] = &drapb.NodeUnconfigurePodResourceResponse{}
+	}
+	return &drapb.NodeUnconfigurePodResourcesResponse{Claims: claims}, nil
 }
 
 func (s *fakeDRADriverGRPCServer) NodeWatchResources(req *drahealthv1.NodeWatchResourcesRequest, stream drahealthv1.DRAResourceHealth_NodeWatchResourcesServer) error {
@@ -1449,6 +1459,33 @@ func TestPrepareResourcesWithUnpreparingClaim(t *testing.T) {
 		"other pod's reference must survive")
 	assert.True(t, cached.isUnpreparing(),
 		"unpreparing flag must still be set")
+}
+
+func TestUnconfigurePodResources(t *testing.T) {
+	logger, tCtx := ktesting.NewTestContext(t)
+	fakeKubeClient := fake.NewClientset()
+	manager, err := NewManager(logger, fakeKubeClient, t.TempDir())
+	require.NoError(t, err)
+	manager.initDRAPluginManager(tCtx, getFakeNode, time.Second)
+
+	pod := genTestPod()
+	claim := genTestClaim(claimName, driverName, deviceName, string(pod.UID))
+	_, err = fakeKubeClient.ResourceV1().ResourceClaims(namespace).Create(tCtx, claim, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	draServerInfo, err := setupFakeDRADriverGRPCServer(tCtx, false, nil, genPrepareResourcesResponse(claim.UID), nil, nil)
+	require.NoError(t, err)
+	defer draServerInfo.teardownFn()
+	require.NoError(t, manager.GetWatcherHandler().RegisterPlugin(tCtx, driverName, draServerInfo.socketName, []string{drapb.DRAPluginService}, nil))
+	require.NoError(t, manager.PrepareResources(tCtx, pod))
+
+	sandbox := &drapb.Sandbox{Id: "sandbox-id"}
+	require.NoError(t, manager.UnconfigurePodResources(tCtx, pod.UID, sandbox))
+	assert.Equal(t, uint32(1), draServerInfo.server.unconfigurePodResourceCalls.Load())
+
+	// Repeating cleanup for the same sandbox is supported by the RPC contract.
+	require.NoError(t, manager.UnconfigurePodResources(tCtx, pod.UID, sandbox))
+	assert.Equal(t, uint32(2), draServerInfo.server.unconfigurePodResourceCalls.Load())
 }
 
 func TestUnprepareResources(t *testing.T) {

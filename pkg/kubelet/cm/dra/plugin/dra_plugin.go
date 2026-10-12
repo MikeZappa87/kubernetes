@@ -176,6 +176,30 @@ func (p *DRAPlugin) NodeConfigurePodResources(
 	return response, err
 }
 
+// NodeUnconfigurePodResources releases resources configured for a pod sandbox.
+func (p *DRAPlugin) NodeUnconfigurePodResources(
+	ctx context.Context,
+	req *drapbv1.NodeUnconfigurePodResourcesRequest,
+	opts ...grpc.CallOption,
+) (*drapbv1.NodeUnconfigurePodResourcesResponse, error) {
+	logger := klog.FromContext(ctx).WithName("dra-plugin")
+	logger = klog.LoggerWithValues(logger, "driverName", p.driverName, "endpoint", p.endpoint)
+	ctx = klog.NewContext(ctx, logger)
+	logger.V(4).Info("Calling NodeUnconfigurePodResources rpc", "request", req)
+
+	if p.chosenService != drapbv1.DRAPluginService {
+		return nil, status.Error(codes.Unimplemented, "NodeUnconfigurePodResources requires the v1 DRAPlugin service")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, p.clientCallTimeout)
+	defer cancel()
+
+	client := drapbv1.NewDRAPluginClient(p.conn)
+	response, err := client.NodeUnconfigurePodResources(ctx, req, opts...)
+	logger.V(4).Info("Done calling NodeUnconfigurePodResources rpc", "response", response, "err", err)
+	return response, err
+}
+
 func newMetricsInterceptor(driverName string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		start := time.Now()

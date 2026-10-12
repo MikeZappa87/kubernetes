@@ -263,6 +263,17 @@ type PodResourceConfigurer interface {
 	ConfigurePodResources(ctx context.Context, claims []*resourceapi.ResourceClaim, sandbox *drapbv1.Sandbox) (result map[types.UID]ConfigureResult, err error)
 }
 
+// PodResourceUnconfigurer is an optional extension for drivers that need to
+// release per-sandbox state created by ConfigurePodResources.
+type PodResourceUnconfigurer interface {
+	// UnconfigurePodResources releases per-sandbox state for the given claims.
+	// It must be safe to retry for the same sandbox, including after a kubelet
+	// restart. Every claim must have an entry in the returned map; nil means
+	// unconfiguration succeeded for that claim. Claim identity is provided even
+	// when the ResourceClaim object has already been deleted.
+	UnconfigurePodResources(ctx context.Context, claims []NamespacedObject, sandbox *drapbv1.Sandbox) (result map[types.UID]error, err error)
+}
+
 // ErrRecoverable distinguishes recoverable errors from those errors which are fatal
 // and should cause the process to exit. Use with:
 //
@@ -1482,6 +1493,44 @@ func (d *nodePluginImplementation) NodeConfigurePodResources(ctx context.Context
 			Error:   errorString(claimResult.Err),
 			Devices: devices,
 		}
+	}
+	return resp, nil
+}
+
+// NodeUnconfigurePodResources implements [drapbv1.NodeUnconfigurePodResources].
+func (d *nodePluginImplementation) NodeUnconfigurePodResources(ctx context.Context, req *drapbv1.NodeUnconfigurePodResourcesRequest) (*drapbv1.NodeUnconfigurePodResourcesResponse, error) {
+	if req.GetSandbox() == nil {
+		return nil, status.Error(codes.InvalidArgument, "sandbox is required")
+	}
+	unconfigurer, ok := d.plugin.(PodResourceUnconfigurer)
+	if !ok {
+		return nil, status.Error(codes.Unimplemented, "driver does not implement PodResourceUnconfigurer")
+	}
+	claims := make([]NamespacedObject, 0, len(req.Claims))
+	for _, claim := range req.Claims {
+		claims = append(claims, NamespacedObject{
+			UID: types.UID(claim.Uid),
+			NamespacedName: types.NamespacedName{
+				Namespace: claim.Namespace,
+				Name:      claim.Name,
+			},
+		})
+	}
+
+	unlock, err := d.serializeGRPCIfEnabled()
+	if err != nil {
+		return nil, fmt.Errorf("serialize gRPC: %w", err)
+	}
+	defer unlock()
+
+	result, err := unconfigurer.UnconfigurePodResources(ctx, claims, req.GetSandbox())
+	if err != nil {
+		return nil, fmt.Errorf("unconfigure pod resources: %w", err)
+	}
+
+	resp := &drapbv1.NodeUnconfigurePodResourcesResponse{Claims: map[string]*drapbv1.NodeUnconfigurePodResourceResponse{}}
+	for uid, claimErr := range result {
+		resp.Claims[string(uid)] = &drapbv1.NodeUnconfigurePodResourceResponse{Error: errorString(claimErr)}
 	}
 	return resp, nil
 }

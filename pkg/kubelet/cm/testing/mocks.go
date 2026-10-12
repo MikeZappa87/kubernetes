@@ -1540,6 +1540,18 @@ func (_mock *MockContainerManager) NodeConfigurePodResources(context1 context.Co
 	return ret.Error(0)
 }
 
+// NodeUnconfigurePodResources provides a mock function for the type MockContainerManager
+func (_mock *MockContainerManager) NodeUnconfigurePodResources(context1 context.Context, podUID types.UID, sandbox *drapbv1.Sandbox) error {
+	ret := _mock.Called(context1, podUID, sandbox)
+	if len(ret) == 0 {
+		panic("no return value specified for NodeUnconfigurePodResources")
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.UID, *drapbv1.Sandbox) error); ok {
+		return returnFunc(context1, podUID, sandbox)
+	}
+	return ret.Error(0)
+}
+
 // ShouldResetExtendedResourceCapacity provides a mock function for the type MockContainerManager
 func (_mock *MockContainerManager) ShouldResetExtendedResourceCapacity() bool {
 	ret := _mock.Called()

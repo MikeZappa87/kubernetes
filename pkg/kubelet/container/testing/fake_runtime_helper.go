@@ -34,15 +34,19 @@ import (
 
 // FakeRuntimeHelper implements RuntimeHelper interfaces for testing purposes.
 type FakeRuntimeHelper struct {
-	DNSServers      []string
-	DNSSearches     []string
-	DNSOptions      []string
-	HostName        string
-	HostDomain      string
-	PodContainerDir string
-	RuntimeHandlers map[string]kubecontainer.RuntimeHandler
-	Err             error
-	PodStats        map[kubetypes.UID]*statsapi.PodStats
+	DNSServers              []string
+	DNSSearches             []string
+	DNSOptions              []string
+	HostName                string
+	HostDomain              string
+	PodContainerDir         string
+	RuntimeHandlers         map[string]kubecontainer.RuntimeHandler
+	Err                     error
+	PodStats                map[kubetypes.UID]*statsapi.PodStats
+	UnconfigureCalls        int
+	UnconfigureErr          error
+	LastUnconfiguredPodUID  kubetypes.UID
+	LastUnconfiguredSandbox *drapbv1.Sandbox
 }
 
 func (f *FakeRuntimeHelper) GenerateRunContainerOptions(_ context.Context, pod *v1.Pod, container *v1.Container, podIP string, podIPs []string, imageVolumes kubecontainer.ImageVolumes) (*kubecontainer.RunContainerOptions, func(), error) {
@@ -118,6 +122,13 @@ func (f *FakeRuntimeHelper) PrepareDynamicResources(ctx context.Context, pod *v1
 
 func (f *FakeRuntimeHelper) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error {
 	return nil
+}
+
+func (f *FakeRuntimeHelper) NodeUnconfigurePodResources(ctx context.Context, podUID kubetypes.UID, sandbox *drapbv1.Sandbox) error {
+	f.UnconfigureCalls++
+	f.LastUnconfiguredPodUID = podUID
+	f.LastUnconfiguredSandbox = sandbox
+	return f.UnconfigureErr
 }
 
 func (f *FakeRuntimeHelper) UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error {

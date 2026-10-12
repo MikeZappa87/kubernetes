@@ -74,6 +74,9 @@ type RuntimeHelper interface {
 
 	NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbox *drapbv1.Sandbox) error
 
+	// NodeUnconfigurePodResources unconfigures resources for a pod.
+	NodeUnconfigurePodResources(ctx context.Context, podUID types.UID, sandbox *drapbv1.Sandbox) error
+
 	// RequestPodReinspect flags a pod to be inspected on the next relist.
 	RequestPodReinspect(types.UID)
 

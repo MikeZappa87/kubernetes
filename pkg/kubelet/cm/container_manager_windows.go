@@ -389,6 +389,10 @@ func (cm *containerManagerImpl) NodeConfigurePodResources(ctx context.Context, p
 	return nil
 }
 
+func (cm *containerManagerImpl) NodeUnconfigurePodResources(_ context.Context, _ types.UID, _ *drapbv1.Sandbox) error {
+	return nil
+}
+
 func (cm *containerManagerImpl) UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }

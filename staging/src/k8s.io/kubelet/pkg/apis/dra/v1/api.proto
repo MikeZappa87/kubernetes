@@ -38,6 +38,13 @@ service DRAPlugin {
   // The same error handling rules apply,
   rpc NodeConfigurePodResources (NodeConfigurePodResourcesRequest)
     returns (NodeConfigurePodResourcesResponse) {}
+
+    // NodeUnconfigurePodResources reverts the per-sandbox configuration done by
+    // NodeConfigurePodResources. It may be called repeatedly, including after
+    // kubelet restarts, so implementations must make it idempotent. The same
+    // per-claim error handling rules as NodeUnprepareResources apply.
+    rpc NodeUnconfigurePodResources (NodeUnconfigurePodResourcesRequest)
+        returns (NodeUnconfigurePodResourcesResponse) {}
 }
 
 message NodePrepareResourcesRequest {
@@ -146,4 +153,25 @@ message NodeConfigurePodResourceResponse {
 
 message Sandbox {
     string netns_path = 1;
+    // The runtime-assigned ID of the sandbox. Required and stable across
+    // retries; drivers should use it to associate and release per-sandbox state.
+    string id = 2;
+}
+
+message NodeUnconfigurePodResourcesRequest {
+    // The ResourceClaims configured for this pod sandbox.
+    repeated Claim claims = 1;
+    // The sandbox whose configuration must be reverted.
+    Sandbox sandbox = 2;
+}
+
+message NodeUnconfigurePodResourcesResponse {
+    // The ResourceClaims for which configuration was reverted, keyed by claim UID.
+    // Every claim in the request must have an entry, even if it has no error.
+    map<string, NodeUnconfigurePodResourceResponse> claims = 1;
+}
+
+message NodeUnconfigurePodResourceResponse {
+    // If non-empty, unconfiguring the ResourceClaim failed.
+    string error = 1;
 }

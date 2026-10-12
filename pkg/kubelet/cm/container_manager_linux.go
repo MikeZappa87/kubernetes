@@ -1123,6 +1123,10 @@ func (cm *containerManagerImpl) NodeConfigurePodResources(ctx context.Context, p
 	return cm.draManager.ConfigurePodResources(ctx, pod, sandbox)
 }
 
+func (cm *containerManagerImpl) NodeUnconfigurePodResources(ctx context.Context, podUID types.UID, sandbox *drapbv1.Sandbox) error {
+	return cm.draManager.UnconfigurePodResources(ctx, podUID, sandbox)
+}
+
 func (cm *containerManagerImpl) UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error {
 	return cm.draManager.UnprepareResources(ctx, pod)
 }

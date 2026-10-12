@@ -308,6 +308,62 @@ func (m *Manager) ConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbo
 	return nil
 }
 
+// UnconfigurePodResources asks each DRA driver used by the pod to release
+// per-sandbox state created during configuration. It is safe to retry.
+func (m *Manager) UnconfigurePodResources(ctx context.Context, podUID types.UID, sandbox *drapb.Sandbox) error {
+	logger := klog.FromContext(ctx).WithName("dra-manager")
+	logger = klog.LoggerWithValues(logger, "podUID", podUID, "sandboxID", sandbox.GetId())
+	batches := make(map[string][]*drapb.Claim)
+
+	err := m.cache.withRLock(func() error {
+		for _, claimInfo := range m.cache.claimInfo {
+			if !claimInfo.hasPodReference(podUID) {
+				continue
+			}
+			claim := &drapb.Claim{
+				Namespace: claimInfo.Namespace,
+				Uid:       string(claimInfo.ClaimUID),
+				Name:      claimInfo.ClaimName,
+			}
+			for driverName := range claimInfo.DriverState {
+				batches[driverName] = append(batches[driverName], claim)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for driverName, claims := range batches {
+		plugin, err := m.draPlugins.GetPlugin(driverName)
+		if err != nil {
+			return err
+		}
+		response, err := plugin.NodeUnconfigurePodResources(ctx, &drapb.NodeUnconfigurePodResourcesRequest{Claims: claims, Sandbox: sandbox})
+		if status.Code(err) == codes.Unimplemented {
+			logger.V(4).Info("DRA driver does not support NodeUnconfigurePodResources", "driverName", driverName)
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("NodeUnconfigurePodResources: %w", err)
+		}
+		for claimUID, result := range response.GetClaims() {
+			claim := lookupClaimRequest(claims, claimUID)
+			if claim == nil {
+				return fmt.Errorf("NodeUnconfigurePodResources returned result for unknown claim UID %s", claimUID)
+			}
+			if result.GetError() != "" {
+				return fmt.Errorf("NodeUnconfigurePodResources failed for ResourceClaim %s: %s", claim.Name, result.GetError())
+			}
+		}
+		if unfinished := len(claims) - len(response.GetClaims()); unfinished != 0 {
+			return fmt.Errorf("NodeUnconfigurePodResources skipped %d ResourceClaims", unfinished)
+		}
+	}
+	return nil
+}
+
 func (m *Manager) prepareResources(ctx context.Context, pod *v1.Pod) error {
 	var err error
 	logger := klog.FromContext(ctx).WithName("dra-manager")

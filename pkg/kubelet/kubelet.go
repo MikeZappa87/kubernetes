@@ -3561,6 +3561,12 @@ func (kl *Kubelet) NodeConfigurePodResources(ctx context.Context, pod *v1.Pod, s
 	return kl.containerManager.NodeConfigurePodResources(ctx, pod, sandbox)
 }
 
+// NodeUnconfigurePodResources calls the container manager NodeUnconfigurePodResources API.
+// This method implements the RuntimeHelper interface.
+func (kl *Kubelet) NodeUnconfigurePodResources(ctx context.Context, podUID types.UID, sandbox *drapbv1.Sandbox) error {
+	return kl.containerManager.NodeUnconfigurePodResources(ctx, podUID, sandbox)
+}
+
 // UnprepareDynamicResources calls the container Manager UnprepareDynamicResources API
 // This method implements the RuntimeHelper interface
 func (kl *Kubelet) UnprepareDynamicResources(ctx context.Context, pod *v1.Pod) error {

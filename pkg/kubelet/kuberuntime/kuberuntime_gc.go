@@ -31,6 +31,7 @@ import (
 	internalapi "k8s.io/cri-api/pkg/apis"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/klog/v2"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 )
 
@@ -69,6 +70,8 @@ type containerGCInfo struct {
 type sandboxGCInfo struct {
 	// The ID of the sandbox.
 	id string
+	// The UID of the pod that owns the sandbox.
+	podUID types.UID
 	// Creation time for the sandbox.
 	createTime time.Time
 	// If true, the sandbox is ready or still has containers.
@@ -166,24 +169,28 @@ func (cgc *containerGC) removeOldestNSandboxes(ctx context.Context, sandboxes []
 	// Remove from oldest to newest (last to first).
 	for i := len(sandboxes) - 1; i >= numToKeep; i-- {
 		if !sandboxes[i].active {
-			cgc.removeSandbox(ctx, sandboxes[i].id)
+			cgc.removeSandbox(ctx, sandboxes[i])
 		}
 	}
 }
 
-// removeSandbox removes the sandbox by sandboxID.
-func (cgc *containerGC) removeSandbox(ctx context.Context, sandboxID string) {
+// removeSandbox removes the sandbox after releasing any DRA configuration.
+func (cgc *containerGC) removeSandbox(ctx context.Context, sandbox sandboxGCInfo) {
 	logger := klog.FromContext(ctx)
-	logger.V(4).Info("Removing sandbox", "sandboxID", sandboxID)
+	logger.V(4).Info("Removing sandbox", "sandboxID", sandbox.id)
+	if err := cgc.manager.runtimeHelper.NodeUnconfigurePodResources(ctx, sandbox.podUID, &drapbv1.Sandbox{Id: sandbox.id}); err != nil {
+		logger.Error(err, "Failed to unconfigure DRA resources before removing sandbox", "sandboxID", sandbox.id)
+		return
+	}
 	// In normal cases, kubelet should've already called StopPodSandbox before
 	// GC kicks in. To guard against the rare cases where this is not true, try
 	// stopping the sandbox before removing it.
-	if err := cgc.client.StopPodSandbox(ctx, sandboxID); err != nil {
-		logger.Error(err, "Failed to stop sandbox before removing", "sandboxID", sandboxID)
+	if err := cgc.client.StopPodSandbox(ctx, sandbox.id); err != nil {
+		logger.Error(err, "Failed to stop sandbox before removing", "sandboxID", sandbox.id)
 		return
 	}
-	if err := cgc.client.RemovePodSandbox(ctx, sandboxID); err != nil {
-		logger.Error(err, "Failed to remove sandbox", "sandboxID", sandboxID)
+	if err := cgc.client.RemovePodSandbox(ctx, sandbox.id); err != nil {
+		logger.Error(err, "Failed to remove sandbox", "sandboxID", sandbox.id)
 	}
 }
 
@@ -300,6 +307,7 @@ func (cgc *containerGC) evictSandboxes(ctx context.Context, evictNonDeletedPods 
 		podUID := types.UID(sandbox.Metadata.Uid)
 		sandboxInfo := sandboxGCInfo{
 			id:         sandbox.Id,
+			podUID:     podUID,
 			createTime: time.Unix(0, sandbox.CreatedAt),
 		}
 

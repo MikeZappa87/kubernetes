@@ -52,9 +52,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DRAPlugin_NodePrepareResources_FullMethodName      = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodePrepareResources"
-	DRAPlugin_NodeUnprepareResources_FullMethodName    = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodeUnprepareResources"
-	DRAPlugin_NodeConfigurePodResources_FullMethodName = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodeConfigurePodResources"
+	DRAPlugin_NodePrepareResources_FullMethodName        = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodePrepareResources"
+	DRAPlugin_NodeUnprepareResources_FullMethodName      = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodeUnprepareResources"
+	DRAPlugin_NodeConfigurePodResources_FullMethodName   = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodeConfigurePodResources"
+	DRAPlugin_NodeUnconfigurePodResources_FullMethodName = "/k8s.io.kubelet.pkg.apis.dra.v1.DRAPlugin/NodeUnconfigurePodResources"
 )
 
 // DRAPluginClient is the client API for DRAPlugin service.
@@ -72,6 +73,9 @@ type DRAPluginClient interface {
 	// NodeConfigurePodResources configures the resources for a pod on the node.
 	// The same error handling rules apply,
 	NodeConfigurePodResources(ctx context.Context, in *NodeConfigurePodResourcesRequest, opts ...grpc.CallOption) (*NodeConfigurePodResourcesResponse, error)
+	// NodeUnconfigurePodResources reverts the per-sandbox configuration done by
+	// NodeConfigurePodResources. The same error handling rules apply.
+	NodeUnconfigurePodResources(ctx context.Context, in *NodeUnconfigurePodResourcesRequest, opts ...grpc.CallOption) (*NodeUnconfigurePodResourcesResponse, error)
 }
 
 type dRAPluginClient struct {
@@ -112,6 +116,16 @@ func (c *dRAPluginClient) NodeConfigurePodResources(ctx context.Context, in *Nod
 	return out, nil
 }
 
+func (c *dRAPluginClient) NodeUnconfigurePodResources(ctx context.Context, in *NodeUnconfigurePodResourcesRequest, opts ...grpc.CallOption) (*NodeUnconfigurePodResourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NodeUnconfigurePodResourcesResponse)
+	err := c.cc.Invoke(ctx, DRAPlugin_NodeUnconfigurePodResources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DRAPluginServer is the server API for DRAPlugin service.
 // All implementations must embed UnimplementedDRAPluginServer
 // for forward compatibility.
@@ -127,6 +141,9 @@ type DRAPluginServer interface {
 	// NodeConfigurePodResources configures the resources for a pod on the node.
 	// The same error handling rules apply,
 	NodeConfigurePodResources(context.Context, *NodeConfigurePodResourcesRequest) (*NodeConfigurePodResourcesResponse, error)
+	// NodeUnconfigurePodResources reverts the per-sandbox configuration done by
+	// NodeConfigurePodResources. The same error handling rules apply.
+	NodeUnconfigurePodResources(context.Context, *NodeUnconfigurePodResourcesRequest) (*NodeUnconfigurePodResourcesResponse, error)
 	mustEmbedUnimplementedDRAPluginServer()
 }
 
@@ -145,6 +162,9 @@ func (UnimplementedDRAPluginServer) NodeUnprepareResources(context.Context, *Nod
 }
 func (UnimplementedDRAPluginServer) NodeConfigurePodResources(context.Context, *NodeConfigurePodResourcesRequest) (*NodeConfigurePodResourcesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method NodeConfigurePodResources not implemented")
+}
+func (UnimplementedDRAPluginServer) NodeUnconfigurePodResources(context.Context, *NodeUnconfigurePodResourcesRequest) (*NodeUnconfigurePodResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NodeUnconfigurePodResources not implemented")
 }
 func (UnimplementedDRAPluginServer) mustEmbedUnimplementedDRAPluginServer() {}
 func (UnimplementedDRAPluginServer) testEmbeddedByValue()                   {}
@@ -221,6 +241,24 @@ func _DRAPlugin_NodeConfigurePodResources_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DRAPlugin_NodeUnconfigurePodResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeUnconfigurePodResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DRAPluginServer).NodeUnconfigurePodResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DRAPlugin_NodeUnconfigurePodResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DRAPluginServer).NodeUnconfigurePodResources(ctx, req.(*NodeUnconfigurePodResourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DRAPlugin_ServiceDesc is the grpc.ServiceDesc for DRAPlugin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -239,6 +277,10 @@ var DRAPlugin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NodeConfigurePodResources",
 			Handler:    _DRAPlugin_NodeConfigurePodResources_Handler,
+		},
+		{
+			MethodName: "NodeUnconfigurePodResources",
+			Handler:    _DRAPlugin_NodeUnconfigurePodResources_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

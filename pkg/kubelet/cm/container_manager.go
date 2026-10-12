@@ -149,6 +149,9 @@ type ContainerManager interface {
 	// NodeConfigurePodResources performs optional per-pod DRA configuration.
 	NodeConfigurePodResources(context.Context, *v1.Pod, *drapbv1.Sandbox) error
 
+	// NodeUnconfigurePodResources releases optional per-sandbox DRA configuration.
+	NodeUnconfigurePodResources(context.Context, types.UID, *drapbv1.Sandbox) error
+
 	// PodMightNeedToUnprepareResources returns true if the pod with the given UID
 	// might need to unprepare resources.
 	PodMightNeedToUnprepareResources(UID types.UID) bool

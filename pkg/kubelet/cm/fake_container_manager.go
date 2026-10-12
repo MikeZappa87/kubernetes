@@ -297,6 +297,13 @@ func (cm *FakeContainerManager) NodeConfigurePodResources(_ context.Context, _ *
 	return nil
 }
 
+func (cm *FakeContainerManager) NodeUnconfigurePodResources(_ context.Context, _ types.UID, _ *drapbv1.Sandbox) error {
+	cm.Lock()
+	defer cm.Unlock()
+	cm.CalledFunctions = append(cm.CalledFunctions, "NodeUnconfigurePodResources")
+	return nil
+}
+
 func (cm *FakeContainerManager) UnprepareDynamicResources(context.Context, *v1.Pod) error {
 	return nil
 }

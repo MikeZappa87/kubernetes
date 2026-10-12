@@ -1766,7 +1766,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(ctx context.Context, pod *v1.Pod, po
 		if netnsErr != nil {
 			logger.V(4).Info("Could not extract network namespace path from verbose PodSandboxStatus info", "err", netnsErr)
 		}
-		sandbox := &drapbv1.Sandbox{NetnsPath: netnsPath}
+		sandbox := &drapbv1.Sandbox{Id: podSandboxID, NetnsPath: netnsPath}
 		if err := m.runtimeHelper.NodeConfigurePodResources(ctx, pod, sandbox); err != nil {
 			logger.Error(err, "Failed to configure pod resources", "pod", klog.KObj(pod))
 			result.Fail(err)
@@ -2134,6 +2134,12 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(ctx context.Context, p
 	result.AddSyncResult(killSandboxResult)
 	// Stop all sandboxes belongs to same pod
 	for _, podSandbox := range runningPod.Sandboxes {
+		sandbox := &drapbv1.Sandbox{Id: podSandbox.ID.ID}
+		if err := m.runtimeHelper.NodeUnconfigurePodResources(ctx, runningPod.ID, sandbox); err != nil {
+			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, fmt.Sprintf("failed to unconfigure DRA resources for sandbox %s: %v", podSandbox.ID.ID, err))
+			logger.Error(err, "Failed to unconfigure DRA resources before stopping sandbox", "podSandboxID", podSandbox.ID)
+			return
+		}
 		if err := m.runtimeService.StopPodSandbox(ctx, podSandbox.ID.ID); err != nil && !crierror.IsNotFound(err) {
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())
 			logger.Error(nil, "Failed to stop sandbox", "podSandboxID", podSandbox.ID)

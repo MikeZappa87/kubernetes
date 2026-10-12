@@ -582,6 +582,7 @@ func TestKillPod(t *testing.T) {
 	tCtx := ktesting.Init(t)
 	fakeRuntime, _, m, err := createTestRuntimeManager(tCtx)
 	assert.NoError(t, err)
+	runtimeHelper := m.runtimeHelper.(*containertest.FakeRuntimeHelper)
 
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -648,6 +649,9 @@ func TestKillPod(t *testing.T) {
 
 	err = m.KillPod(tCtx, pod, runningPod, nil)
 	assert.NoError(t, err)
+	assert.Equal(t, 1, runtimeHelper.UnconfigureCalls)
+	assert.Equal(t, pod.UID, runtimeHelper.LastUnconfiguredPodUID)
+	assert.Equal(t, fakeSandbox.Id, runtimeHelper.LastUnconfiguredSandbox.GetId())
 	assert.Len(t, fakeRuntime.Containers, 3)
 	assert.Len(t, fakeRuntime.Sandboxes, 1)
 	for _, sandbox := range fakeRuntime.Sandboxes {
@@ -656,6 +660,30 @@ func TestKillPod(t *testing.T) {
 	for _, c := range fakeRuntime.Containers {
 		assert.Equal(t, runtimeapi.ContainerState_CONTAINER_EXITED, c.State)
 	}
+}
+
+func TestKillPodLeavesSandboxWhenDRAUnconfigureFails(t *testing.T) {
+	tCtx := ktesting.Init(t)
+	fakeRuntime, _, m, err := createTestRuntimeManager(tCtx)
+	require.NoError(t, err)
+	runtimeHelper := m.runtimeHelper.(*containertest.FakeRuntimeHelper)
+	runtimeHelper.UnconfigureErr = errors.New("IP lease cleanup failed")
+
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{UID: "pod-uid", Name: "pod", Namespace: "ns"}}
+	fakeSandbox := makeFakePodSandbox(tCtx, m, sandboxTemplate{pod: pod, state: runtimeapi.PodSandboxState_SANDBOX_READY})
+	fakeRuntime.SetFakeSandboxes([]*apitest.FakePodSandbox{fakeSandbox})
+	runningPod := kubecontainer.Pod{
+		ID: pod.UID,
+		Sandboxes: []*kubecontainer.Container{{
+			ID: kubecontainer.ContainerID{ID: fakeSandbox.Id, Type: apitest.FakeRuntimeName},
+		}},
+	}
+
+	err = m.KillPod(tCtx, pod, runningPod, nil)
+	require.ErrorContains(t, err, "IP lease cleanup failed")
+	assert.Equal(t, 1, runtimeHelper.UnconfigureCalls)
+	assert.Equal(t, runtimeapi.PodSandboxState_SANDBOX_READY, fakeSandbox.State,
+		"sandbox must remain running so cleanup can be retried before teardown")
 }
 
 func TestSyncPod(t *testing.T) {

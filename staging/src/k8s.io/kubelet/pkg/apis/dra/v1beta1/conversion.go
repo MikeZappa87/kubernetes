@@ -117,6 +117,10 @@ func (V1Beta1ServerWrapper) NodeConfigurePodResources(context.Context, *v1.NodeC
 	return nil, status.Error(codes.Unimplemented, "NodeConfigurePodResources is not available in the v1beta1 DRAPlugin service")
 }
 
+func (V1Beta1ServerWrapper) NodeUnconfigurePodResources(context.Context, *v1.NodeUnconfigurePodResourcesRequest) (*v1.NodeUnconfigurePodResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "NodeUnconfigurePodResources is not available in the v1beta1 DRAPlugin service")
+}
+
 // V1ClientWrapper implements the [NodeClient] interface by wrapping a [v1.DRAPluginClient].
 type V1ClientWrapper struct {
 	v1.DRAPluginClient
@@ -197,4 +201,8 @@ func (w V1Beta1ClientWrapper) NodeUnprepareResources(ctx context.Context, req *v
 
 func (V1Beta1ClientWrapper) NodeConfigurePodResources(context.Context, *v1.NodeConfigurePodResourcesRequest, ...grpc.CallOption) (*v1.NodeConfigurePodResourcesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "NodeConfigurePodResources is not available in the v1beta1 DRAPlugin service")
+}
+
+func (V1Beta1ClientWrapper) NodeUnconfigurePodResources(context.Context, *v1.NodeUnconfigurePodResourcesRequest, ...grpc.CallOption) (*v1.NodeUnconfigurePodResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "NodeUnconfigurePodResources is not available in the v1beta1 DRAPlugin service")
 }
