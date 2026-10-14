@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -284,7 +285,17 @@ func (m *Manager) ConfigurePodResources(ctx context.Context, pod *v1.Pod, sandbo
 		if err != nil {
 			return err
 		}
-		response, err := plugin.NodeConfigurePodResources(ctx, &drapb.NodeConfigurePodResourcesRequest{Claims: claims, Sandbox: sandbox})
+		response, err := plugin.NodeConfigurePodResources(ctx, &drapb.NodeConfigurePodResourcesRequest{
+			Claims:  claims,
+			Sandbox: sandbox,
+			Pod: &drapb.PodMetadata{
+				Uid:         string(pod.UID),
+				Namespace:   pod.Namespace,
+				Name:        pod.Name,
+				Labels:      maps.Clone(pod.Labels),
+				Annotations: maps.Clone(pod.Annotations),
+			},
+		})
 		if status.Code(err) == codes.Unimplemented {
 			logger.V(4).Info("DRA driver does not support NodeConfigurePodResources", "driverName", driverName)
 			continue

@@ -74,7 +74,9 @@ type DRAPluginClient interface {
 	// The same error handling rules apply,
 	NodeConfigurePodResources(ctx context.Context, in *NodeConfigurePodResourcesRequest, opts ...grpc.CallOption) (*NodeConfigurePodResourcesResponse, error)
 	// NodeUnconfigurePodResources reverts the per-sandbox configuration done by
-	// NodeConfigurePodResources. The same error handling rules apply.
+	// NodeConfigurePodResources. It may be called repeatedly, including after
+	// kubelet restarts, so implementations must make it idempotent. The same
+	// per-claim error handling rules as NodeUnprepareResources apply.
 	NodeUnconfigurePodResources(ctx context.Context, in *NodeUnconfigurePodResourcesRequest, opts ...grpc.CallOption) (*NodeUnconfigurePodResourcesResponse, error)
 }
 
@@ -142,7 +144,9 @@ type DRAPluginServer interface {
 	// The same error handling rules apply,
 	NodeConfigurePodResources(context.Context, *NodeConfigurePodResourcesRequest) (*NodeConfigurePodResourcesResponse, error)
 	// NodeUnconfigurePodResources reverts the per-sandbox configuration done by
-	// NodeConfigurePodResources. The same error handling rules apply.
+	// NodeConfigurePodResources. It may be called repeatedly, including after
+	// kubelet restarts, so implementations must make it idempotent. The same
+	// per-claim error handling rules as NodeUnprepareResources apply.
 	NodeUnconfigurePodResources(context.Context, *NodeUnconfigurePodResourcesRequest) (*NodeUnconfigurePodResourcesResponse, error)
 	mustEmbedUnimplementedDRAPluginServer()
 }

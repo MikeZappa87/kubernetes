@@ -488,7 +488,7 @@ func (ex *ExamplePlugin) PrepareResourceClaims(ctx context.Context, claims []*re
 	return result, nil
 }
 
-func (ex *ExamplePlugin) ConfigurePodResources(_ context.Context, claims []*resourceapi.ResourceClaim, _ *drapbv1.Sandbox) (map[types.UID]kubeletplugin.ConfigureResult, error) {
+func (ex *ExamplePlugin) ConfigurePodResources(_ context.Context, claims []*resourceapi.ResourceClaim, _ *drapbv1.PodMetadata, _ *drapbv1.Sandbox) (map[types.UID]kubeletplugin.ConfigureResult, error) {
 	result := make(map[types.UID]kubeletplugin.ConfigureResult, len(claims))
 	for _, claim := range claims {
 		result[claim.UID] = kubeletplugin.ConfigureResult{}

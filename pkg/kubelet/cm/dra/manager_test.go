@@ -80,10 +80,12 @@ type fakeDRADriverGRPCServer struct {
 	driverName                  string
 	timeout                     *time.Duration
 	prepareResourceCalls        atomic.Uint32
+	configurePodResourceCalls   atomic.Uint32
 	unprepareResourceCalls      atomic.Uint32
 	unconfigurePodResourceCalls atomic.Uint32
 	watchResourcesCalls         atomic.Uint32
 	prepareResourcesResponse    *drapb.NodePrepareResourcesResponse
+	configuredPod               *drapb.PodMetadata
 	unprepareResourcesResponse  *drapb.NodeUnprepareResourcesResponse
 	watchResourcesResponses     chan *drahealthv1.NodeWatchResourcesResponse
 	watchResourcesError         error
@@ -149,6 +151,16 @@ func (s *fakeDRADriverGRPCServer) NodeUnprepareResources(ctx context.Context, re
 	}
 
 	return s.unprepareResourcesResponse, nil
+}
+
+func (s *fakeDRADriverGRPCServer) NodeConfigurePodResources(_ context.Context, req *drapb.NodeConfigurePodResourcesRequest) (*drapb.NodeConfigurePodResourcesResponse, error) {
+	s.configurePodResourceCalls.Add(1)
+	s.configuredPod = req.GetPod()
+	claims := make(map[string]*drapb.NodeConfigurePodResourceResponse, len(req.GetClaims()))
+	for _, claim := range req.GetClaims() {
+		claims[claim.GetUid()] = &drapb.NodeConfigurePodResourceResponse{}
+	}
+	return &drapb.NodeConfigurePodResourcesResponse{Claims: claims}, nil
 }
 
 func (s *fakeDRADriverGRPCServer) NodeUnconfigurePodResources(ctx context.Context, req *drapb.NodeUnconfigurePodResourcesRequest) (*drapb.NodeUnconfigurePodResourcesResponse, error) {
@@ -1459,6 +1471,37 @@ func TestPrepareResourcesWithUnpreparingClaim(t *testing.T) {
 		"other pod's reference must survive")
 	assert.True(t, cached.isUnpreparing(),
 		"unpreparing flag must still be set")
+}
+
+func TestConfigurePodResourcesPassesPodMetadata(t *testing.T) {
+	logger, tCtx := ktesting.NewTestContext(t)
+	fakeKubeClient := fake.NewClientset()
+	manager, err := NewManager(logger, fakeKubeClient, t.TempDir())
+	require.NoError(t, err)
+	manager.initDRAPluginManager(tCtx, getFakeNode, time.Second)
+
+	pod := genTestPod()
+	pod.Labels = map[string]string{"app": "network-demo"}
+	pod.Annotations = map[string]string{"network.example.com/pool": "blue"}
+	claim := genTestClaim(claimName, driverName, deviceName, string(pod.UID))
+	_, err = fakeKubeClient.ResourceV1().ResourceClaims(namespace).Create(tCtx, claim, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	draServerInfo, err := setupFakeDRADriverGRPCServer(tCtx, false, nil, genPrepareResourcesResponse(claim.UID), nil, nil)
+	require.NoError(t, err)
+	defer draServerInfo.teardownFn()
+	require.NoError(t, manager.GetWatcherHandler().RegisterPlugin(tCtx, driverName, draServerInfo.socketName, []string{drapb.DRAPluginService}, nil))
+	require.NoError(t, manager.PrepareResources(tCtx, pod))
+	require.NoError(t, manager.ConfigurePodResources(tCtx, pod, &drapb.Sandbox{Id: "sandbox-id"}))
+
+	require.Equal(t, uint32(1), draServerInfo.server.configurePodResourceCalls.Load())
+	assert.Equal(t, &drapb.PodMetadata{
+		Uid:         string(pod.UID),
+		Namespace:   pod.Namespace,
+		Name:        pod.Name,
+		Labels:      pod.Labels,
+		Annotations: pod.Annotations,
+	}, draServerInfo.server.configuredPod)
 }
 
 func TestUnconfigurePodResources(t *testing.T) {

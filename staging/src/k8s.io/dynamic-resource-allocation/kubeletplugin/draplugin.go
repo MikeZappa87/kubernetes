@@ -256,11 +256,12 @@ type DRAPlugin interface {
 // do not implement it continue to support the existing DRA operations.
 type PodResourceConfigurer interface {
 	// ConfigurePodResources configures resources for the pod using the given
-	// allocated claims and the sandbox details returned by the runtime. The
-	// network namespace path may be empty when the runtime does not expose it.
+	// allocated claims, selected pod metadata, and sandbox details returned by
+	// the runtime. Pod metadata excludes the pod spec and status. The network
+	// namespace path may be empty when the runtime does not expose it.
 	// It must be safe to call again when kubelet retries pod startup. The helper
 	// has already retrieved and validated the claims.
-	ConfigurePodResources(ctx context.Context, claims []*resourceapi.ResourceClaim, sandbox *drapbv1.Sandbox) (result map[types.UID]ConfigureResult, err error)
+	ConfigurePodResources(ctx context.Context, claims []*resourceapi.ResourceClaim, pod *drapbv1.PodMetadata, sandbox *drapbv1.Sandbox) (result map[types.UID]ConfigureResult, err error)
 }
 
 // PodResourceUnconfigurer is an optional extension for drivers that need to
@@ -1472,7 +1473,7 @@ func (d *nodePluginImplementation) NodeConfigurePodResources(ctx context.Context
 	}
 	defer unlock()
 
-	result, err := configurer.ConfigurePodResources(ctx, claims, req.GetSandbox())
+	result, err := configurer.ConfigurePodResources(ctx, claims, req.GetPod(), req.GetSandbox())
 	if err != nil {
 		return nil, fmt.Errorf("configure pod resources: %w", err)
 	}

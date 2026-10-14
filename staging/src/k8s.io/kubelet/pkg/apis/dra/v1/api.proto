@@ -128,6 +128,25 @@ message NodeConfigurePodResourcesRequest {
     repeated Claim claims = 1;
     // The sandbox in which the pod is running. Required.
     Sandbox sandbox = 2;
+    // Selected pod identity and metadata. This deliberately excludes the pod
+    // spec and status; labels and annotations are included for driver policy.
+    PodMetadata pod = 3;
+}
+
+// PodMetadata contains the pod context relevant to resource configuration,
+// without exposing the full core Pod API object to DRA drivers.
+message PodMetadata {
+    // The pod UID. Required.
+    string uid = 1;
+    // The pod namespace. Required.
+    string namespace = 2;
+    // The pod name. Required.
+    string name = 3;
+    // Pod labels at configuration time.
+    map<string, string> labels = 4;
+    // Pod annotations at configuration time. Drivers should only use
+    // annotations they are authorized and configured to consume.
+    map<string, string> annotations = 5;
 }
 
 message NodeConfigurePodResourcesResponse {
