@@ -446,6 +446,18 @@ func TestToKubeContainerState(t *testing.T) {
 	}
 }
 
+func TestToKubeRuntimeStatusDefaultNetworkCapability(t *testing.T) {
+	got := toKubeRuntimeStatus(
+		&runtimeapi.RuntimeStatus{},
+		nil,
+		&runtimeapi.RuntimeFeatures{DefaultNetworkNone: true},
+	)
+
+	if got.Features == nil || !got.Features.DefaultNetworkNone {
+		t.Fatalf("RuntimeFeatures.DefaultNetworkNone = %v, want true", got.Features)
+	}
+}
+
 func TestGetAppArmorProfile(t *testing.T) {
 	tests := []struct {
 		name               string

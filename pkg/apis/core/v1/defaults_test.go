@@ -45,6 +45,7 @@ import (
 // featureGatedPodDefaults contains defaults applied to Pods only when all feature gates are enabled.
 // These are set in SetDefaults_Pod (not SetDefaults_PodSpec) to avoid spurious workload rollouts.
 var featureGatedPodDefaults = map[string]string{
+	".Spec.DefaultNetwork": `"Pod"`,
 	".Spec.Containers[0].Lifecycle.PostStart.HTTPGet.Protocol":                                           `"HTTP1"`,
 	".Spec.Containers[0].Lifecycle.PreStop.HTTPGet.Protocol":                                             `"HTTP1"`,
 	".Spec.Containers[0].LivenessProbe.ProbeHandler.HTTPGet.Protocol":                                    `"HTTP1"`,
@@ -250,6 +251,43 @@ func testWorkloadDefaults(t *testing.T, featuresEnabled bool) {
 func TestPodDefaults(t *testing.T) {
 	t.Run("enabled_features", func(t *testing.T) { testPodDefaults(t, true) })
 	t.Run("disabled_features", func(t *testing.T) { testPodDefaults(t, false) })
+}
+
+func TestPodDefaultNetworkDefaults(t *testing.T) {
+	featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.PodDefaultNetwork, true)
+	for _, tc := range []struct {
+		name             string
+		hostNetwork      bool
+		defaultNetwork   *v1.PodDefaultNetwork
+		wantNetwork      v1.PodDefaultNetwork
+		wantHostNetwork  bool
+		wantDNS          v1.DNSPolicy
+		wantServiceLinks bool
+	}{
+		{name: "legacy pod defaults", wantNetwork: v1.PodDefaultNetworkPod, wantDNS: v1.DNSClusterFirst, wantServiceLinks: true},
+		{name: "legacy host network", hostNetwork: true, wantNetwork: v1.PodDefaultNetworkHost, wantHostNetwork: true, wantDNS: v1.DNSClusterFirst, wantServiceLinks: true},
+		{name: "none defaults", defaultNetwork: ptr.To(v1.PodDefaultNetworkNone), wantNetwork: v1.PodDefaultNetworkNone, wantDNS: v1.DNSNone, wantServiceLinks: false},
+		{name: "host enum mirrors legacy field", defaultNetwork: ptr.To(v1.PodDefaultNetworkHost), wantNetwork: v1.PodDefaultNetworkHost, wantHostNetwork: true, wantDNS: v1.DNSClusterFirst, wantServiceLinks: true},
+		{name: "old hostNetwork patch wins over defaulted pod mode", hostNetwork: true, defaultNetwork: ptr.To(v1.PodDefaultNetworkPod), wantNetwork: v1.PodDefaultNetworkHost, wantHostNetwork: true, wantDNS: v1.DNSClusterFirst, wantServiceLinks: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pod := &v1.Pod{Spec: v1.PodSpec{HostNetwork: tc.hostNetwork, DefaultNetwork: tc.defaultNetwork}}
+			corev1.SetDefaults_Pod(pod)
+			corev1.SetDefaults_PodSpec(&pod.Spec)
+			if pod.Spec.DefaultNetwork == nil || *pod.Spec.DefaultNetwork != tc.wantNetwork {
+				t.Fatalf("DefaultNetwork = %v, want %q", pod.Spec.DefaultNetwork, tc.wantNetwork)
+			}
+			if pod.Spec.HostNetwork != tc.wantHostNetwork {
+				t.Errorf("HostNetwork = %t, want %t", pod.Spec.HostNetwork, tc.wantHostNetwork)
+			}
+			if pod.Spec.DNSPolicy != tc.wantDNS {
+				t.Errorf("DNSPolicy = %q, want %q", pod.Spec.DNSPolicy, tc.wantDNS)
+			}
+			if pod.Spec.EnableServiceLinks == nil || *pod.Spec.EnableServiceLinks != tc.wantServiceLinks {
+				t.Errorf("EnableServiceLinks = %v, want %t", pod.Spec.EnableServiceLinks, tc.wantServiceLinks)
+			}
+		})
+	}
 }
 func testPodDefaults(t *testing.T, featuresEnabled bool) {
 	setAllFeatures(t, featuresEnabled)

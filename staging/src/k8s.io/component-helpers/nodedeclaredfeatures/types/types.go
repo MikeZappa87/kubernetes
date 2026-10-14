@@ -80,6 +80,9 @@ type RuntimeFeatures struct {
 	UserNamespacesHostNetwork bool
 	// MountOptions indicates if the runtime supports additional bind mount options on container mounts.
 	MountOptions bool
+	// DefaultNetworkNone indicates whether the runtime can create a sandbox
+	// without attaching its network namespace to the default pod network.
+	DefaultNetworkNone bool
 }
 
 // StaticConfiguration provides a view of a node's static configuration required for feature discovery.

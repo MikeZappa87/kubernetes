@@ -3550,6 +3550,15 @@ const (
 	DNSNone DNSPolicy = "None"
 )
 
+// PodDefaultNetwork describes the pod's default network.
+type PodDefaultNetwork string
+
+const (
+	PodDefaultNetworkPod  PodDefaultNetwork = "Pod"
+	PodDefaultNetworkHost PodDefaultNetwork = "Host"
+	PodDefaultNetworkNone PodDefaultNetwork = "None"
+)
+
 // NodeSelector represents the union of the results of one or more label queries
 // over a set of nodes; that is, it represents the OR of the selectors represented
 // by the node selector terms.
@@ -4203,6 +4212,10 @@ type PodSpec struct {
 	// +featureGate=EvictionRequestAPI
 	// +optional
 	EvictionResponders []EvictionResponder
+	// DefaultNetwork selects the pod's default network and is mirrored with HostNetwork.
+	// +featureGate=PodDefaultNetwork
+	// +optional
+	DefaultNetwork *PodDefaultNetwork
 }
 
 // PodResourceClaim references exactly one ResourceClaim through a ClaimSource.

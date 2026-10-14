@@ -650,11 +650,11 @@ func TestRuntimeStatusString(t *testing.T) {
 			{Name: "handler1", SupportsRecursiveReadOnlyMounts: true, SupportsUserNamespaces: false},
 			{Name: "handler2", SupportsRecursiveReadOnlyMounts: false, SupportsUserNamespaces: true},
 		},
-		Features: &RuntimeFeatures{SupplementalGroupsPolicy: true, UserNamespacesHostNetwork: true},
+		Features: &RuntimeFeatures{SupplementalGroupsPolicy: true, UserNamespacesHostNetwork: true, DefaultNetworkNone: true},
 	}
 
 	result := status.String()
-	expected := "Runtime Conditions: RuntimeReady=true reason:ready message:runtime is ready, NetworkReady=false reason:not ready message:network is not ready; Handlers: Name=handler1 SupportsRecursiveReadOnlyMounts: true SupportsUserNamespaces: false, Name=handler2 SupportsRecursiveReadOnlyMounts: false SupportsUserNamespaces: true, Features: SupplementalGroupsPolicy: true UserNamespacesHostNetwork: true MountOptions: false"
+	expected := "Runtime Conditions: RuntimeReady=true reason:ready message:runtime is ready, NetworkReady=false reason:not ready message:network is not ready; Handlers: Name=handler1 SupportsRecursiveReadOnlyMounts: true SupportsUserNamespaces: false, Name=handler2 SupportsRecursiveReadOnlyMounts: false SupportsUserNamespaces: true, Features: SupplementalGroupsPolicy: true UserNamespacesHostNetwork: true MountOptions: false DefaultNetworkNone: true"
 	assert.Equal(t, expected, result, "String()")
 }
 

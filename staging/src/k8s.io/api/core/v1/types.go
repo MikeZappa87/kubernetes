@@ -4078,6 +4078,22 @@ const (
 	DNSNone DNSPolicy = "None"
 )
 
+// PodDefaultNetwork describes the pod's default network.
+// +enum
+// +k8s:validation-gen-nolint
+type PodDefaultNetwork string
+
+const (
+	// PodDefaultNetworkPod preserves the historical behavior: the pod gets
+	// its own network namespace attached to the default pod network.
+	PodDefaultNetworkPod PodDefaultNetwork = "Pod"
+	// PodDefaultNetworkHost runs the pod in the host network namespace.
+	PodDefaultNetworkHost PodDefaultNetwork = "Host"
+	// PodDefaultNetworkNone creates an isolated network namespace with only
+	// loopback configured and no default pod network attachment.
+	PodDefaultNetworkNone PodDefaultNetwork = "None"
+)
+
 const (
 	// DefaultTerminationGracePeriodSeconds indicates the default duration in
 	// seconds a pod needs to terminate gracefully.
@@ -4844,6 +4860,16 @@ type PodSpec struct {
 	// +k8s:maxItems=10
 	// +k8s:alpha(since: "1.37")=+k8s:dependentForbidden("schedulingGroup")
 	EvictionResponders []EvictionResponder `json:"evictionResponders,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,44,rep,name=evictionResponders"`
+	// defaultNetwork selects the pod's default network. Pod preserves historical
+	// behavior, Host is equivalent to hostNetwork: true, and None creates an
+	// isolated network namespace with only loopback configured.
+	// HostNetwork and this field are kept in sync. None defaults dnsPolicy to
+	// None and enableServiceLinks to false; those defaults may be overridden.
+	// Network-dependent features such as hostPorts and network probes are
+	// forbidden with None. This field is immutable.
+	// +featureGate=PodDefaultNetwork
+	// +optional
+	DefaultNetwork *PodDefaultNetwork `json:"defaultNetwork,omitempty" protobuf:"bytes,45,opt,name=defaultNetwork"`
 }
 
 // PodResourceClaim references exactly one ResourceClaim, either directly

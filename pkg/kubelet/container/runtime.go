@@ -283,7 +283,7 @@ func (c *ContainerID) IsEmpty() bool {
 
 // MarshalJSON formats a given ContainerID into a byte array.
 func (c *ContainerID) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("%q", c.String())), nil
+	return fmt.Appendf(nil, "%q", c.String()), nil
 }
 
 // UnmarshalJSON parses ContainerID from a given array of bytes.
@@ -686,6 +686,7 @@ type RuntimeFeatures struct {
 	SupplementalGroupsPolicy  bool
 	UserNamespacesHostNetwork bool
 	MountOptions              bool
+	DefaultNetworkNone        bool
 }
 
 // String formats the runtime condition into a human readable string.
@@ -693,7 +694,11 @@ func (f *RuntimeFeatures) String() string {
 	if f == nil {
 		return "nil"
 	}
-	return fmt.Sprintf("SupplementalGroupsPolicy: %v UserNamespacesHostNetwork: %v MountOptions: %v", f.SupplementalGroupsPolicy, f.UserNamespacesHostNetwork, f.MountOptions)
+	features := fmt.Sprintf("SupplementalGroupsPolicy: %v UserNamespacesHostNetwork: %v MountOptions: %v", f.SupplementalGroupsPolicy, f.UserNamespacesHostNetwork, f.MountOptions)
+	if f.DefaultNetworkNone {
+		features += " DefaultNetworkNone: true"
+	}
+	return features
 }
 
 // Pods represents the list of pods
