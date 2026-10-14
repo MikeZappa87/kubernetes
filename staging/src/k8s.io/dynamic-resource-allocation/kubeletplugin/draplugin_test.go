@@ -32,11 +32,13 @@ import (
 	"google.golang.org/grpc/status"
 
 	resourceapi "k8s.io/api/resource/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/dynamic-resource-allocation/resourceslice"
 	drahealthv1 "k8s.io/kubelet/pkg/apis/dra-health/v1"
+	drapbv1 "k8s.io/kubelet/pkg/apis/dra/v1"
 )
 
 // stubPlugin implements the minimal [DRAPlugin] interface and opts out of
@@ -55,6 +57,48 @@ func (s *stubPlugin) HandleError(ctx context.Context, err error, msg string) {}
 
 func (s *stubPlugin) WatchHealthStatus(ctx context.Context, reports chan<- DeviceHealthReport) error {
 	return ErrHealthNotSupported
+}
+
+type configurePlugin struct {
+	stubPlugin
+	podMetadata *drapbv1.PodMetadata
+}
+
+func (p *configurePlugin) ConfigurePodResources(_ context.Context, _ []*resourceapi.ResourceClaim, pod *drapbv1.PodMetadata, _ *drapbv1.Sandbox) (map[types.UID]ConfigureResult, error) {
+	p.podMetadata = pod
+	return map[types.UID]ConfigureResult{}, nil
+}
+
+func TestNodeConfigurePodResourcesPassesPodMetadata(t *testing.T) {
+	claim := &resourceapi.ResourceClaim{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "workloads", Name: "network", UID: "claim-uid"},
+		Status:     resourceapi.ResourceClaimStatus{Allocation: &resourceapi.AllocationResult{}},
+	}
+	kubeClient := fake.NewClientset(claim)
+	plugin := &configurePlugin{}
+	helper, err := Start(t.Context(), plugin,
+		DriverName("test-driver"),
+		KubeClient(kubeClient),
+		RegistrationService(false),
+		DRAService(false),
+	)
+	require.NoError(t, err)
+	defer helper.Stop()
+
+	metadata := &drapbv1.PodMetadata{
+		Uid:         "pod-uid",
+		Namespace:   "workloads",
+		Name:        "network-pod",
+		Labels:      map[string]string{"app": "network-demo"},
+		Annotations: map[string]string{"network.example.com/pool": "blue"},
+	}
+	_, err = (&nodePluginImplementation{Helper: helper}).NodeConfigurePodResources(t.Context(), &drapbv1.NodeConfigurePodResourcesRequest{
+		Claims:  []*drapbv1.Claim{{Namespace: claim.Namespace, Name: claim.Name, Uid: string(claim.UID)}},
+		Pod:     metadata,
+		Sandbox: &drapbv1.Sandbox{Id: "sandbox-id"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, metadata, plugin.podMetadata)
 }
 
 // healthPlugin is a [DRAPlugin] which supports health reporting by sending a
